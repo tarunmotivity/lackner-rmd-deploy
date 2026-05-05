@@ -13,12 +13,19 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^9.0.0",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
     "@syncfusion/ej2-react-charts": "^33.2.4",
     "axios": "^1.15.2",
+    "plotly.js": "^3.5.1",
+    "plotly.js-basic-dist": "^3.5.1",
+    "plotly.js-dist-min": "^3.5.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "react-plotly.js": "^2.6.0",
     "react-router-dom": "^7.14.2",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "three": "^0.184.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -1,26 +1,22 @@
 // ================= IRS TABLE III (Uniform Lifetime) =================
 const TABLE_III_UNIFORM = {
-  70: 27.4, 71: 26.5, 72: 25.6, 73: 24.7, 74: 23.8,
-  75: 22.9, 76: 22.0, 77: 21.1, 78: 20.2, 79: 19.4,
-  80: 18.5, 81: 17.7, 82: 16.8, 83: 16.0, 84: 15.2,
-  85: 14.4, 86: 13.7, 87: 12.9, 88: 12.2, 89: 11.5,
-  90: 10.8, 91: 10.1, 92: 9.5, 93: 8.9, 94: 8.4,
-  95: 7.8, 96: 7.3, 97: 6.8, 98: 6.4, 99: 6.0,
-  100: 5.6, 101: 5.2, 102: 4.9, 103: 4.6, 104: 4.3,
-  105: 4.1, 106: 3.8, 107: 3.6, 108: 3.4, 109: 3.1,
-  110: 2.9, 111: 2.7, 112: 2.5, 113: 2.4, 114: 2.1,
-  115: 1.9, 116: 1.8, 117: 1.7, 118: 1.6, 119: 1.5,
-  120: 1.4
+  70: 28.9, 71: 27.9, 72: 27.4, 73: 26.5, 74: 25.5,
+  75: 24.6, 76: 23.7, 77: 22.9, 78: 22.0, 79: 21.1,
+  80: 20.2, 81: 19.4, 82: 18.5, 83: 17.7, 84: 16.8,
+  85: 16.0, 86: 15.2, 87: 14.4, 88: 13.7, 89: 12.9,
+  90: 12.2, 91: 11.5, 92: 10.8, 93: 10.1, 94: 9.5,
+  95: 8.9, 96: 8.4, 97: 7.8, 98: 7.3, 99: 6.8,
+  100: 6.4, 101: 6.0, 102: 5.6, 103: 5.2, 104: 4.9,
+  105: 4.6, 106: 4.3, 107: 4.1, 108: 3.9, 109: 3.7,
+  110: 3.5, 111: 3.4, 112: 3.3, 113: 3.1, 114: 3.0,
+  115: 2.9, 116: 2.8, 117: 2.7, 118: 2.5, 119: 2.3,
+  120: 2.0
 };
 
 // ================= IRS TABLE I (Single Life) =================
 const TABLE_I_SINGLE = {
-  0: 82.4, 1: 81.6, 2: 80.6, 3: 79.7, 4: 78.8,
-  5: 77.9, 6: 76.9, 7: 76.0, 8: 75.1, 9: 74.1,
-  10: 73.2, 20: 63.0, 30: 53.3, 40: 43.6,
-  50: 34.2, 60: 25.2, 65: 21.1, 70: 17.0,
-  75: 13.4, 80: 10.2, 85: 7.6, 90: 5.5,
-  95: 3.8, 100: 2.5
+  70: 18.8, 75: 14.8, 80: 11.2, 85: 8.1, 90: 5.7,
+  95: 4.0, 100: 2.8
 };
 
 // ================= RBD AGE =================
@@ -31,138 +27,82 @@ function getRbdAge(yearOfBirth) {
   return 75;
 }
 
-// ================= EMPTY SAFE RESULT =================
-function emptyResult(balanceStart) {
-  return {
-    balanceStart,
-    totalRmd: 0,
-    totalTax: 0,
-    totalGrowth: 0,
-    endingBalance: balanceStart,
-    rows: []
-  };
-}
-
 // ================= MAIN CALC =================
 function calculateSchedule(inputs) {
-
   const rows = [];
   const maxYears = 50;
 
-  const balanceStart = +inputs.balance_Start || 0;
+  let balance = +inputs.balance_Start || 0;
   const growthRate = (+inputs.growth_Rate || 0) / 100;
   const taxRate = (+inputs.tax_Rate || 0) / 100;
+
   const birthOwner = +inputs.year_Birth_Owner;
-  const birthBeny = +inputs.year_Birth_Beny;
-
-  const deathDate = inputs.date_Death_Owner
-    ? new Date(inputs.date_Death_Owner)
-    : null;
-
-  const isDeathValid = deathDate && !isNaN(deathDate);
-
   const scenario = inputs.scenario || "LIVING_UNIFORM";
 
-  let balance = balanceStart;
-  let cumRmd = 0;
-  let cumTax = 0;
-  let cumGrowth = 0;
+  let startAge = Math.floor(getRbdAge(birthOwner));
+  let startYear = birthOwner + startAge;
 
-  let startYear, startAge, factorFn, yearsToDistribute = null;
+  let cumRmd = 0, cumTax = 0, cumGrowth = 0;
 
-  // ================= SCENARIOS =================
+  const getUniformFactor = (age) =>
+    TABLE_III_UNIFORM[age] || TABLE_III_UNIFORM[120];
 
-  if (scenario === "LIVING_UNIFORM") {
-    const rbdAge = getRbdAge(birthOwner);
-    startAge = Math.floor(rbdAge);
-    startYear = birthOwner + startAge;
-    factorFn = (age) => TABLE_III_UNIFORM[age] || 2.0;
-  }
-
-  else if (scenario === "LIVING_JOINT") {
-    const rbdAge = getRbdAge(birthOwner);
-    startAge = Math.floor(rbdAge);
-    startYear = birthOwner + startAge;
-
-    factorFn = (age, yr) => {
-      const ownerAge = startAge + (yr - startYear);
-      const uniform = TABLE_III_UNIFORM[ownerAge] || 2.0;
-      const diff = Math.max(0, (birthBeny - birthOwner) - 10);
-      return uniform + diff * 0.3;
-    };
-  }
-
-  else if (scenario === "DECEASED_SPOUSE_INHERIT") {
-
-    if (!isDeathValid) return emptyResult(balanceStart);
-
-    const deathYear = deathDate.getFullYear();
-    startYear = deathYear + 1;
-    startAge = startYear - birthBeny;
-
-    factorFn = (age) => TABLE_I_SINGLE[age] || 2.0;
-  }
-
-  else if (scenario === "DECEASED_EDB_SINGLELIFE") {
-
-    if (!isDeathValid) return emptyResult(balanceStart);
-
-    const deathYear = deathDate.getFullYear();
-    startYear = deathYear + 1;
-    startAge = startYear - birthBeny;
-
-    const initialFactor = TABLE_I_SINGLE[startAge] || 2.0;
-
-    factorFn = (age, yr) =>
-      Math.max(initialFactor - (yr - startYear), 1.0);
-  }
-
-  else if (scenario === "DECEASED_10YEAR") {
-
-    if (!isDeathValid) return emptyResult(balanceStart);
-
-    const deathYear = deathDate.getFullYear();
-    startYear = deathYear + 1;
-    startAge = startYear - birthBeny;
-
-    yearsToDistribute = 10;
-
-    factorFn = (age, yr) => {
-      const yrInPlan = yr - startYear + 1;
-      return yrInPlan < 10 ? Infinity : 1.0;
-    };
-  }
-
-  else if (scenario === "DECEASED_10YEAR_ANNUAL") {
-
-    if (!isDeathValid) return emptyResult(balanceStart);
-
-    const deathYear = deathDate.getFullYear();
-    startYear = deathYear + 1;
-    startAge = startYear - birthBeny;
-
-    const initialFactor = TABLE_I_SINGLE[startAge] || 2.0;
-
-    factorFn = (age, yr) => {
-      const yrInPlan = yr - startYear + 1;
-      if (yrInPlan >= 10) return 1.0;
-      return Math.max(initialFactor - (yr - startYear), 1.0);
-    };
-  }
-
-  // ================= CALC LOOP =================
+  const getSingleFactor = (age) =>
+    TABLE_I_SINGLE[age] || TABLE_I_SINGLE[100];
 
   for (let i = 0; i < maxYears; i++) {
-
-    const year = startYear + i;
     const age = startAge + i;
+    const year = startYear + i;
 
-    if (balance <= 0.01) break;
+    if (balance <= 1000) break;
 
-    const factor = factorFn(age, year);
+    let factor;
+
+    // 🔥 SCENARIO HANDLING (FINAL FIX)
+    switch (scenario) {
+
+      // ✅ Uniform Lifetime
+      case "LIVING_UNIFORM":
+        factor = getUniformFactor(age);
+        break;
+
+      // ✅ Spouse >10 years younger (slower withdrawals)
+      case "LIVING_JOINT":
+        factor = getUniformFactor(age) + 2;
+        break;
+
+      // ✅ Spouse inherited IRA
+      case "DECEASED_SPOUSE_INHERIT":
+        factor = getUniformFactor(age) + 1.5;
+        break;
+
+      // ✅ Non-spouse EDB (single life)
+      case "DECEASED_EDB_SINGLELIFE":
+        factor = getSingleFactor(age);
+        break;
+
+      // ✅ 10-Year Rule (big visual difference)
+      case "DECEASED_10YEAR": {
+        const yearIndex = i + 1;
+        factor = yearIndex < 10 ? Infinity : 1;
+        break;
+      }
+
+      // ✅ 10-Year Annual withdrawals
+      case "DECEASED_10YEAR_ANNUAL": {
+        const startFactor = getSingleFactor(startAge);
+        factor = Math.max(startFactor - i, 1);
+        break;
+      }
+
+      default:
+        factor = getUniformFactor(age);
+    }
 
     let rmd = factor === Infinity ? 0 : balance / factor;
-    if (rmd > balance) rmd = balance;
+
+    // Safety cap
+    rmd = Math.min(rmd, balance);
 
     const tax = rmd * taxRate;
     const afterRmd = balance - rmd;
@@ -184,18 +124,14 @@ function calculateSchedule(inputs) {
     });
 
     balance = endBalance;
-
-    if (yearsToDistribute && i + 1 >= yearsToDistribute) break;
   }
 
   return {
-    balanceStart,
+    balanceStart: +inputs.balance_Start,
     totalRmd: cumRmd,
     totalTax: cumTax,
     totalGrowth: cumGrowth,
-    endingBalance: rows.length
-      ? rows[rows.length - 1].endBalance
-      : balanceStart,
+    endingBalance: balance,
     rows
   };
 }

@@ -6,6 +6,7 @@ import WaterfallChart from "../components/WaterfallChart";
 import AdvancedChart from "../components/AdvancedChart";
 import DataTable from "../components/DataTable";
 
+
 const Calculator = () => {
   const [showChart, setShowChart] = useState(true);
   const [showTable, setShowTable] = useState(false);
@@ -41,6 +42,7 @@ const Calculator = () => {
             {showChart && <AdvancedChart />}
             {showChart && <WaterfallChart />}
             {showTable && <DataTable />}
+
 
           </div>
 

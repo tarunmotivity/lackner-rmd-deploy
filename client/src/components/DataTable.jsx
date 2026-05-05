@@ -17,7 +17,6 @@ const DataTable = () => {
     <Card sx={{ borderRadius: 3 }}>
       <CardContent>
 
-        
         <Typography
           variant="h6"
           sx={{ fontWeight: 600, mb: 2 }}
@@ -39,7 +38,7 @@ const DataTable = () => {
             }}
           >
             <thead>
-              <tr style={{ textAlign: "left", color: "#6b7280" }}>
+              <tr style={{ textAlign: "left", color: "var(--text-secondary)" }}>
                 <th style={{ padding: "10px" }}>Year</th>
                 <th style={{ padding: "10px" }}>Age</th>
                 <th style={{ padding: "10px" }}>RMD</th>
@@ -53,15 +52,16 @@ const DataTable = () => {
                 <tr
                   key={i}
                   style={{
-                    borderTop: "1px solid #f3f4f6"
+                    borderTop: "1px solid var(--border-color)"
                   }}
                 >
-                  <td style={{ padding: "10px" }}>{r.year}</td>
-                  <td style={{ padding: "10px" }}>{r.age}</td>
+                  <td style={{ padding: "10px", color: "var(--text-primary)" }}>{r.year}</td>
+                  <td style={{ padding: "10px", color: "var(--text-primary)" }}>{r.age}</td>
 
                   <td
                     style={{
                       padding: "10px",
+                      color: "var(--text-primary)",
                       fontVariantNumeric: "tabular-nums"
                     }}
                   >
@@ -81,6 +81,7 @@ const DataTable = () => {
                   <td
                     style={{
                       padding: "10px",
+                      color: "var(--text-primary)",
                       fontWeight: 500,
                       fontVariantNumeric: "tabular-nums"
                     }}

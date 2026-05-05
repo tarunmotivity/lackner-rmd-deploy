@@ -1,71 +1,23 @@
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  Legend,
-  Customized
-} from "recharts";
-
+import { useState } from "react";
 import useRmd from "../hooks/useRmd";
-import { formatCurrency } from "../utils/format";
-
+import PlotlyChart from "./PlotlyChart";
+import { useThemeContext } from "../context/ThemeContext";
 
 import {
   Card,
   CardContent,
   Typography,
-  Box
+  Box,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 
-
-const RowBackground = (props) => {
-  const { yAxisMap, offset, data } = props;
-
-  if (!yAxisMap || !offset || !data) return null;
-
-  const yAxis = Object.values(yAxisMap)[0];
-  if (!yAxis || !yAxis.scale) return null;
-
-  const bandSize = yAxis.scale.bandwidth?.();
-  if (!bandSize) return null;
-
-  return (
-    <g>
-      {data.map((entry, index) => {
-        const y = yAxis.scale(entry.label);
-        if (y === undefined) return null;
-
-        return (
-          <rect
-            key={index}
-            x={offset.left}
-            y={y}
-            width={offset.width}
-            height={bandSize}
-            fill={index % 2 === 0 ? "#f9fafb" : "#f3f4f6"}
-          />
-        );
-      })}
-    </g>
-  );
-};
-
 const WaterfallProjection = () => {
-  const { result, loading } = useRmd();
+  const { mode } = useThemeContext();
+  const { result } = useRmd();
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent>
-          <Typography align="center">Loading...</Typography>
-        </CardContent>
-      </Card>
-    );
-  }
+  const [view, setView] = useState("stack");
+  const [hoverIndex, setHoverIndex] = useState(null);
 
   if (!result || result.rows.length === 0) {
     return (
@@ -77,138 +29,161 @@ const WaterfallProjection = () => {
     );
   }
 
-  const rows = result.rows.slice(0, 25);
+  const rows = result.rows.slice(0, 20);
+  const yLabels = rows.map((r) => `${r.year} - ${r.age}`);
 
-  const data = rows.map((r, i, arr) => {
-    const prev = arr[i - 1] || {};
-    const remaining = r.beginBalance - r.rmd - r.tax;
+  // Tooltip data
+  const customData = rows.map((r) => [
+    r.beginBalance,
+    r.rmd,
+    r.tax,
+    r.growth,
+    r.endBalance,
+  ]);
 
-    return {
-      label: `${r.year} - ${r.age}`,
-
-      principal: remaining,
-
-      rmdCurrent: r.rmd,
-      rmdPrior: prev.rmd || 0,
-
-      taxCurrent: r.tax,
-      taxPrior: prev.tax || 0,
-
-      growthCurrent: r.growth,
-      growthPrior: prev.growth || 0,
-
-      full: r
-    };
-  });
+  // 🔥 Highlight strip
+  const shapes =
+    hoverIndex !== null
+      ? [
+          {
+            type: "rect",
+            xref: "paper",
+            yref: "y",
+            x0: 0,
+            x1: 1,
+            y0: yLabels[hoverIndex],
+            y1: yLabels[hoverIndex],
+            fillcolor:
+              mode === "dark"
+                ? "rgba(255,255,255,0.05)"
+                : "rgba(0,0,0,0.05)",
+            line: { width: 0 },
+          },
+        ]
+      : [];
 
   return (
     <Card sx={{ borderRadius: 3 }}>
       <CardContent>
 
-     
-        <Typography
-          variant="h6"
-          sx={{ fontWeight: 600, mb: 2 }}
-        >
-          Waterfall Projection
-        </Typography>
+        {/* HEADER */}
+        <Box display="flex" justifyContent="space-between" mb={2}>
+          <Typography variant="h6">Waterfall Projection</Typography>
 
-        
-        <Box sx={{ width: "100%", height: "520px" }}>
+          <ToggleButtonGroup
+            value={view}
+            exclusive
+            onChange={(_, v) => v && setView(v)}
+            size="small"
+          >
+            <ToggleButton value="stack">STACKED</ToggleButton>
+            <ToggleButton value="group">GROUPED</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
 
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={data}
-              layout="vertical"
-              barCategoryGap="6%"
-              barGap={0}
-            >
+        {/* CHART */}
+        <Box sx={{ width: "100%", height: 520 }}>
+          <PlotlyChart
+            data={[
+              // ✅ Principal (controls hover)
+              {
+                x: rows.map((r) => r.beginBalance),
+                y: yLabels,
+                type: "bar",
+                orientation: "h",
+                name: "Principal",
+                customdata: customData,
+                marker: {
+                  color: "#2E7D32",
+                  opacity: 0.9,
+                },
+
+                hovertemplate:
+                  "<b>Year %{y}</b><br><br>" +
+                  "🟩 Principal: %{customdata[0]:$,.0f}<br>" +
+                  "🟣 RMD: %{customdata[1]:$,.0f}<br>" +
+                  "🔴 Tax: %{customdata[2]:$,.0f}<br>" +
+                  "🟢 Growth: %{customdata[3]:$,.0f}<br><br>" +
+                  "<b>End Balance: %{customdata[4]:$,.0f}</b>" +
+                  "<extra></extra>",
+              },
+
+              // ❌ Other bars (no hover)
+              {
+                x: rows.map((r) => r.rmd),
+                y: yLabels,
+                type: "bar",
+                orientation: "h",
+                name: "RMD",
+                marker: { color: "#7B1FA2" },
+                hoverinfo: "skip",
+              },
+              {
+                x: rows.map((r) => r.tax),
+                y: yLabels,
+                type: "bar",
+                orientation: "h",
+                name: "Tax",
+                marker: { color: "#D32F2F" },
+                hoverinfo: "skip",
+              },
+              {
+                x: rows.map((r) => r.growth),
+                y: yLabels,
+                type: "bar",
+                orientation: "h",
+                name: "Growth",
+                marker: { color: "#66BB6A" },
+                hoverinfo: "skip",
+              },
+            ]}
+            layout={{
+              barmode: view === "stack" ? "stack" : "group",
+              hovermode: "closest",
+
+              // 🔥 Tooltip style
+              hoverlabel: {
+                bgcolor: "#111827",
+                bordercolor: "#1f2937",
+                font: {
+                  color: "#f9fafb",
+                  size: 13,
+                },
+              },
+
+              plot_bgcolor: mode === "dark" ? "#1e293b" : "#f9fafb",
+              paper_bgcolor: mode === "dark" ? "#1e293b" : "#ffffff",
+
+              xaxis: {
+                tickprefix: "$",
+                tickformat: ",.0f",
+                gridcolor: mode === "dark" ? "#334155" : "#eee",
+              },
+
+              yaxis: {
+                automargin: true,
+                gridcolor: mode === "dark" ? "#334155" : "#eee",
+              },
+
+              legend: {
+                orientation: "h",
+                y: -0.25,
+                x: 0.5,
+                xanchor: "center",
+              },
+
+              shapes,
+              margin: { t: 40, l: 120, r: 20, b: 80 },
+            }}
 
             
-              <Customized component={(props) => (
-                <RowBackground {...props} data={data} />
-              )} />
-
-              <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-
-              <XAxis
-                type="number"
-                tickFormatter={(v) =>
-                  `$${(v / 1000).toFixed(0)}k`
-                }
-              />
-
-              <YAxis
-                type="category"
-                dataKey="label"
-                width={110}
-                interval={0}
-                tick={{ fontSize: 12 }}
-              />
-
-           
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-
-                  const d = payload[0].payload.full;
-
-                  return (
-                    <Box
-                      sx={{
-                        bgcolor: "#111827",
-                        color: "#fff",
-                        p: 2,
-                        borderRadius: 2,
-                        fontSize: 12,
-                        boxShadow: 3
-                      }}
-                    >
-                      <Typography fontWeight={600}>
-                        Year {d.year}, Age {d.age}
-                      </Typography>
-
-                      <Typography>
-                        Begin: {formatCurrency(d.beginBalance)}
-                      </Typography>
-
-                      <Typography>
-                        RMD: {formatCurrency(d.rmd)}
-                      </Typography>
-
-                      <Typography>
-                        Tax: {formatCurrency(d.tax)}
-                      </Typography>
-
-                      <Typography>
-                        Growth: {formatCurrency(d.growth)}
-                      </Typography>
-
-                      <Typography fontWeight={600}>
-                        End: {formatCurrency(d.endBalance)}
-                      </Typography>
-                    </Box>
-                  );
-                }}
-              />
-
-              <Legend />
-
-              
-              <Bar dataKey="principal" stackId="a" fill="#4d7c0f" name="Principal" />
-
-              <Bar dataKey="rmdCurrent" stackId="a" fill="#6d28d9" name="RMD Current" />
-              <Bar dataKey="rmdPrior" stackId="a" fill="#c4b5fd" name="RMD Prior" />
-
-              <Bar dataKey="taxCurrent" stackId="a" fill="#e11d48" name="Tax Current" />
-              <Bar dataKey="taxPrior" stackId="a" fill="#f9a8d4" name="Tax Prior" />
-
-              <Bar dataKey="growthCurrent" stackId="a" fill="#22c55e" name="Growth Current" />
-              <Bar dataKey="growthPrior" stackId="a" fill="#bbf7d0" name="Growth Prior" />
-
-            </BarChart>
-          </ResponsiveContainer>
-
+            onHover={(e) => {
+              if (e.points && e.points.length > 0) {
+                setHoverIndex(e.points[0].pointIndex);
+              }
+            }}
+            onUnhover={() => setHoverIndex(null)}
+          />
         </Box>
 
       </CardContent>

@@ -8,16 +8,22 @@ import {
   ResponsiveContainer,
   CartesianGrid,
   Legend,
+  // eslint-disable-next-line no-unused-vars
   PieChart,
+  // eslint-disable-next-line no-unused-vars
   Pie,
+  // eslint-disable-next-line no-unused-vars
   Cell,
 } from "recharts";
-
+ 
 import { useState } from "react";
 import useRmd from "../hooks/useRmd";
 import { formatCurrency } from "../utils/format";
-
-
+import PieChart3D from "./PieChart3D";
+import ThreeDBarChart from "./ThreeDBarChart";
+ 
+ 
+ 
 import {
   Card,
   CardContent,
@@ -26,19 +32,19 @@ import {
   ToggleButtonGroup,
   Box,
 } from "@mui/material";
-
+ 
 const AdvancedChart = () => {
   const { result, inputs } = useRmd();
-
+ 
   const [view, setView] = useState("projection");
   const [activeIndex, setActiveIndex] = useState(0);
-
+ 
   const handleChange = (_, newView) => {
     if (newView !== null) setView(newView);
   };
-
+ 
   const isDeceased = inputs?.scenario?.includes("DECEASED");
-
+ 
   if (isDeceased && !inputs.date_Death_Owner) {
     return (
       <Card>
@@ -48,7 +54,7 @@ const AdvancedChart = () => {
       </Card>
     );
   }
-
+ 
   if (!result || result.rows.length === 0) {
     return (
       <Card>
@@ -58,8 +64,8 @@ const AdvancedChart = () => {
       </Card>
     );
   }
-
-
+ 
+ 
   const data = result.rows.slice(0, 30).map((r) => ({
     label: `${r.age} (${r.year})`,
     rmd: r.rmd,
@@ -67,19 +73,19 @@ const AdvancedChart = () => {
     growth: r.growth,
     balance: r.endBalance,
   }));
-
+ 
   const pieData = [
     { label: "Withdrawals", value: result.totalRmd },
     { label: "Taxes", value: result.totalTax },
     { label: "Growth", value: result.totalGrowth },
   ];
-
+ 
   const total = result.totalRmd + result.totalTax + result.totalGrowth;
-
+ 
   return (
     <Card sx={{ borderRadius: 3 }}>
       <CardContent>
-        
+       
         <Box
           display="flex"
           justifyContent="space-between"
@@ -87,7 +93,7 @@ const AdvancedChart = () => {
           mb={2}
         >
           <Typography variant="h6">Projection</Typography>
-
+ 
           <ToggleButtonGroup
             value={view}
             exclusive
@@ -99,25 +105,25 @@ const AdvancedChart = () => {
             <ToggleButton value="pie">Pie</ToggleButton>
           </ToggleButtonGroup>
         </Box>
-
-        <Box sx={{ width: "100%", height: 350 }}>
-          
+ 
+        <Box sx={{ width: "100%", height: 350, display: "flex", flexDirection: "column" }}>
+         
           {view === "projection" && (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" />
-
+ 
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-
+ 
                 <YAxis tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-
+ 
                 <Tooltip formatter={(v) => formatCurrency(v)} />
                 <Legend />
-
+ 
                 <Bar dataKey="rmd" fill="#7c3aed" />
                 <Bar dataKey="tax" fill="#ef4444" />
                 <Bar dataKey="growth" fill="#22c55e" />
-
+ 
                 <Line
                   dataKey="balance"
                   stroke="#0ea5e9"
@@ -127,28 +133,34 @@ const AdvancedChart = () => {
               </BarChart>
             </ResponsiveContainer>
           )}
-
-        
-          {view === "bar" && (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" />
-
-                <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-
-                <YAxis tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-
-                <Tooltip formatter={(v) => formatCurrency(v)} />
-                <Legend />
-
-                <Bar dataKey="rmd" fill="#7c3aed" />
-                <Bar dataKey="tax" fill="#ef4444" />
-                <Bar dataKey="growth" fill="#22c55e" />
-              </BarChart>
-            </ResponsiveContainer>
+ 
+       
+         {view === "bar" && (
+            <>
+              <Box sx={{ width: "100%", flexGrow: 1, position: "relative", minHeight: 0 }}>
+                <ThreeDBarChart data={data} formatCurrency={formatCurrency} />
+              </Box>
+              <Box sx={{ display: 'flex', gap: 3, justifyContent: 'center', pt: 1, pb: 1 }}>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Box sx={{ width: 14, height: 14, backgroundColor: '#7c3aed', borderRadius: '2px' }} />
+                  <Typography variant="body2" color="textPrimary" fontWeight="500">RMD</Typography>
+                </Box>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Box sx={{ width: 14, height: 14, backgroundColor: '#ef4444', borderRadius: '2px' }} />
+                  <Typography variant="body2" color="textPrimary" fontWeight="500">Tax</Typography>
+                </Box>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Box sx={{ width: 14, height: 14, backgroundColor: '#22c55e', borderRadius: '2px' }} />
+                  <Typography variant="body2" color="textPrimary" fontWeight="500">Growth</Typography>
+                </Box>
+              </Box>
+            </>
           )}
 
-          
+ 
+         
+         
+ 
           {view === "pie" && (
             <Box
               sx={{
@@ -157,70 +169,25 @@ const AdvancedChart = () => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                px: 3,
+                px: 1,
               }}
             >
-         
+              {/* Left side: 3D Pie Chart */}
               <Box
                 sx={{
-                  flex: 1,
+                  flex: 1.5,
+                  height: "100%",
                   display: "flex",
                   justifyContent: "center",
                   position: "relative",
+                  minHeight: 350
                 }}
               >
-                <PieChart width={260} height={260}>
-                  <Tooltip
-                    formatter={(value) => [
-                      `$${Math.round(value).toLocaleString()}`,
-                      activeIndex === 0
-                        ? "Total RMDs"
-                        : activeIndex === 1
-                          ? "Total Taxes"
-                          : "Total Growth",
-                    ]}
-                  />
-
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={3}
-                    activeIndex={activeIndex}
-                    onMouseEnter={(_, i) => setActiveIndex(i)}
-                  >
-                    <Cell fill="#7c3aed" />
-                    <Cell fill="#ef4444" />
-                    <Cell fill="#22c55e" />
-                  </Pie>
-                </PieChart>
-
-                
-                <Box
-                  sx={{
-                    position: "absolute",
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                    textAlign: "center",
-                  }}
-                >
-                  <Typography variant="caption" color="gray">
-                    {pieData[activeIndex].label}
-                  </Typography>
-
-                  <Typography fontWeight={600}>
-                    {formatCurrency(pieData[activeIndex].value)}
-                  </Typography>
-
-                  <Typography variant="caption" color="gray">
-                    {((pieData[activeIndex].value / total) * 100).toFixed(1)}%
-                  </Typography>
-                </Box>
+                <PieChart3D data={pieData} />
               </Box>
-
-              
+ 
+ 
+             
               <Box
                 sx={{
                   flex: 1,
@@ -232,7 +199,7 @@ const AdvancedChart = () => {
               >
                 {pieData.map((item, i) => {
                   const percent = ((item.value / total) * 100).toFixed(1);
-
+ 
                   return (
                     <Box
                       key={i}
@@ -266,10 +233,10 @@ const AdvancedChart = () => {
                                   : "#22c55e",
                           }}
                         />
-
+ 
                         <Typography fontSize={13}>{item.label}</Typography>
                       </Box>
-
+ 
                       <Box textAlign="right">
                         <Typography
                           sx={{
@@ -293,5 +260,7 @@ const AdvancedChart = () => {
     </Card>
   );
 };
-
+ 
 export default AdvancedChart;
+ 
+ 

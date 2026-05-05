@@ -51,71 +51,69 @@ const InputForm = ({
     a.click();
   };
 
+  const inputClass = "w-full border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] p-2 rounded focus:outline-none focus:border-purple-500 transition-colors duration-300";
+
   return (
-    <div className="glass p-6 rounded-2xl space-y-5 shadow">
+    <div className="glass p-6 rounded-2xl space-y-5 shadow text-[var(--text-primary)] transition-colors duration-300">
 
       <h3 className="font-semibold text-lg">Input Parameters</h3>
 
-      
       <div>
-        <label className="text-xs text-gray-500">Starting Balance ($)</label>
+        <label className="text-xs text-[var(--text-secondary)]">Starting Balance ($)</label>
         <input
           name="balance_Start"
           value={inputs.balance_Start}
           onChange={handleChange}
-          className="w-full border p-2 rounded"
+          className={inputClass}
         />
       </div>
 
-      
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs text-gray-500">Growth Rate (%)</label>
+          <label className="text-xs text-[var(--text-secondary)]">Growth Rate (%)</label>
           <input
             name="growth_Rate"
             value={inputs.growth_Rate}
             onChange={handleChange}
-            className="w-full border p-2 rounded"
+            className={inputClass}
           />
         </div>
 
         <div>
-          <label className="text-xs text-gray-500">Tax Rate (%)</label>
+          <label className="text-xs text-[var(--text-secondary)]">Tax Rate (%)</label>
           <input
             name="tax_Rate"
             value={inputs.tax_Rate}
             onChange={handleChange}
-            className="w-full border p-2 rounded"
+            className={inputClass}
           />
         </div>
       </div>
 
-      
       <div>
-        <label className="text-xs text-gray-500">Owner’s Year of Birth</label>
+        <label className="text-xs text-[var(--text-secondary)]">Owner’s Year of Birth</label>
         <input
           name="year_Birth_Owner"
           value={inputs.year_Birth_Owner}
           onChange={handleChange}
-          className="w-full border p-2 rounded"
+          className={inputClass}
         />
       </div>
 
       <div>
-        <label className="text-xs text-gray-500">
+        <label className="text-xs text-[var(--text-secondary)]">
           Beneficiary Year of Birth
         </label>
         <input
           name="year_Birth_Beny"
           value={inputs.year_Birth_Beny}
           onChange={handleChange}
-          className="w-full border p-2 rounded"
+          className={inputClass}
         />
       </div>
 
-      
       <div>
-        <label className="text-xs text-gray-500">
+        <label className="text-xs text-[var(--text-secondary)]">
           Date of Owner’s Death
         </label>
         <input
@@ -125,19 +123,18 @@ const InputForm = ({
           onChange={(e) =>
             setInputs({ ...inputs, date_Death_Owner: e.target.value })
           }
-          className="w-full border p-2 rounded"
+          className={inputClass}
         />
       </div>
 
-  
       <div>
-        <label className="text-xs text-gray-500">Plan Type</label>
+        <label className="text-xs text-[var(--text-secondary)]">Plan Type</label>
         <select
           value={inputs.plan}
           onChange={(e) =>
             setInputs({ ...inputs, plan: e.target.value })
           }
-          className="w-full border p-2 rounded"
+          className={inputClass}
         >
           <option value="IRA">Traditional IRA</option>
           <option value="401k">401(k)</option>
@@ -145,7 +142,6 @@ const InputForm = ({
         </select>
       </div>
 
-      
       <div>
         <h4 className="text-sm font-semibold mb-2">Scenario</h4>
 
@@ -155,10 +151,10 @@ const InputForm = ({
             onClick={() =>
               setInputs({ ...inputs, scenario: s.id })
             }
-            className={`w-full text-left p-2 rounded mb-2 text-sm ${
+            className={`w-full text-left p-2 rounded mb-2 text-sm transition-colors duration-300 ${
               inputs.scenario === s.id
                 ? "bg-purple-600 text-white"
-                : "bg-gray-100"
+                : "bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-slate-600"
             }`}
           >
             {s.label}
@@ -166,72 +162,74 @@ const InputForm = ({
         ))}
       </div>
 
-      
-      <div className="mt-4 border-t pt-3">
-        <h4 className="text-xs font-semibold text-gray-500 mb-2">
+      <div className="mt-4 border-t border-[var(--border-color)] pt-3 transition-colors duration-300">
+        <h4 className="text-xs font-semibold text-[var(--text-secondary)] mb-2">
           DISPLAY
         </h4>
 
         <div className="flex gap-4 mb-2">
-          <label>
+          <label className="flex items-center gap-1 cursor-pointer">
             <input
               type="checkbox"
               checked={showChart}
               onChange={() => setShowChart(!showChart)}
+              className="accent-purple-600"
             /> Chart
           </label>
 
-          <label>
+          <label className="flex items-center gap-1 cursor-pointer">
             <input
               type="checkbox"
               checked={showTable}
               onChange={() => setShowTable(!showTable)}
+              className="accent-purple-600"
             /> Table
           </label>
         </div>
 
         <div className="flex gap-4">
-          <label>
+          <label className="flex items-center gap-1 cursor-pointer">
             <input
               type="checkbox"
               checked={showGrowth}
               onChange={() => setShowGrowth(!showGrowth)}
+              className="accent-purple-600"
             /> Growth
           </label>
 
-          <label>
+          <label className="flex items-center gap-1 cursor-pointer">
             <input
               type="checkbox"
               checked={showTax}
               onChange={() => setShowTax(!showTax)}
+              className="accent-purple-600"
             /> Tax
           </label>
         </div>
       </div>
 
-      
       <div className="flex gap-2 flex-wrap pt-3">
-        <button className="bg-purple-600 text-white px-4 py-2 rounded">
+        <button className="bg-purple-600 hover:bg-purple-700 transition-colors text-white px-4 py-2 rounded">
           Calculate
         </button>
 
         <button
           onClick={handleReset}
-          className="border px-4 py-2 rounded"
+          className="border border-[var(--border-color)] hover:bg-[var(--hover-bg)] transition-colors px-4 py-2 rounded"
         >
           Reset
         </button>
 
         <button
           onClick={handlePrint}
-          className="border px-4 py-2 rounded"
+          className="border border-[var(--border-color)] hover:bg-[var(--hover-bg)] transition-colors px-4 py-2 rounded"
         >
           Print
         </button>
 
         <button
           onClick={handleExport}
-          className="border px-4 py-2 rounded"
+          className="border border-[var(--border-color)] hover:bg-[var(--hover-bg)] transition-colors px-4 py-2 rounded"
         >
           Export JSON
         </button>
