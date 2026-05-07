@@ -101,7 +101,7 @@ function calculateSchedule(inputs) {
 
     let rmd = factor === Infinity ? 0 : balance / factor;
 
-    // Safety cap
+    
     rmd = Math.min(rmd, balance);
 
     const tax = rmd * taxRate;

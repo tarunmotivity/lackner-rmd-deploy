@@ -14,8 +14,10 @@ exports.calculateRmd = async (req, res) => {
     });
 
    
-    res.json({ result });
+    
     console.log("Incoming Inputs:", req.body);
+    console.log("✅ Saved to DB");
+    res.json({ result });
 
   } catch (error) {
     console.error(error);

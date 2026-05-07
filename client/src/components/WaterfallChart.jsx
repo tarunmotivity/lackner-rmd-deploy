@@ -1,194 +1,176 @@
-import { useState } from "react";
-import useRmd from "../hooks/useRmd";
-import PlotlyChart from "./PlotlyChart";
-import { useThemeContext } from "../context/ThemeContext";
-
 import {
-  Card,
-  CardContent,
-  Typography,
   Box,
-  ToggleButton,
-  ToggleButtonGroup,
+  Typography,
 } from "@mui/material";
 
-const WaterfallProjection = () => {
-  const { mode } = useThemeContext();
-  const { result } = useRmd();
+import CascadeFlow3D from "./CascadeFlow3D";
 
-  const [view, setView] = useState("stack");
-  const [hoverIndex, setHoverIndex] = useState(null);
+import { useThemeContext } from "../context/ThemeContext";
 
-  if (!result || result.rows.length === 0) {
-    return (
-      <Card>
-        <CardContent>
-          <Typography align="center">No Data</Typography>
-        </CardContent>
-      </Card>
-    );
-  }
+const WaterfallChart = () => {
+  const { mode } =
+    useThemeContext();
 
-  const rows = result.rows.slice(0, 20);
-  const yLabels = rows.map((r) => `${r.year} - ${r.age}`);
-
-  // Tooltip data
-  const customData = rows.map((r) => [
-    r.beginBalance,
-    r.rmd,
-    r.tax,
-    r.growth,
-    r.endBalance,
-  ]);
-
-  // 🔥 Highlight strip
-  const shapes =
-    hoverIndex !== null
-      ? [
-          {
-            type: "rect",
-            xref: "paper",
-            yref: "y",
-            x0: 0,
-            x1: 1,
-            y0: yLabels[hoverIndex],
-            y1: yLabels[hoverIndex],
-            fillcolor:
-              mode === "dark"
-                ? "rgba(255,255,255,0.05)"
-                : "rgba(0,0,0,0.05)",
-            line: { width: 0 },
-          },
-        ]
-      : [];
+  const isDark =
+    mode === "dark";
 
   return (
-    <Card sx={{ borderRadius: 3 }}>
-      <CardContent>
+    <Box
+      sx={{
+        width: "100%",
 
-        {/* HEADER */}
-        <Box display="flex" justifyContent="space-between" mb={2}>
-          <Typography variant="h6">Waterfall Projection</Typography>
+        borderRadius: "22px",
 
-          <ToggleButtonGroup
-            value={view}
-            exclusive
-            onChange={(_, v) => v && setView(v)}
-            size="small"
+        overflow: "hidden",
+
+        background: isDark
+          ? "linear-gradient(180deg, #020617 0%, #0f172a 100%)"
+          : "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+
+        border: isDark
+          ? "1px solid rgba(255,255,255,0.06)"
+          : "1px solid rgba(15,23,42,0.08)",
+
+        boxShadow: isDark
+          ? "0 12px 35px rgba(0,0,0,0.4)"
+          : "0 6px 20px rgba(15,23,42,0.08)",
+
+        backdropFilter: "blur(10px)",
+
+        p: 2,
+
+        transition:
+          "all 0.3s ease",
+      }}
+    >
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
+
+      <Box
+        sx={{
+          display: "flex",
+
+          justifyContent:
+            "space-between",
+
+          alignItems: "center",
+
+          mb: 1.8,
+
+          p: 1.2,
+
+          borderRadius: "16px",
+
+          background: isDark
+            ? "linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.85))"
+            : "linear-gradient(135deg, #ffffff, #f8fafc)",
+
+          border: isDark
+            ? "1px solid rgba(255,255,255,0.08)"
+            : "1px solid rgba(15,23,42,0.08)",
+
+          boxShadow: isDark
+            ? "0 6px 18px rgba(0,0,0,0.3)"
+            : "0 4px 12px rgba(15,23,42,0.06)",
+        }}
+      >
+        {/* LEFT */}
+
+        <Box>
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 800,
+
+              letterSpacing:
+                "-0.3px",
+
+              color: isDark
+                ? "#ffffff"
+                : "#0f172a",
+            }}
           >
-            <ToggleButton value="stack">STACKED</ToggleButton>
-            <ToggleButton value="group">GROUPED</ToggleButton>
-          </ToggleButtonGroup>
+            Financial Waterfall
+          </Typography>
+
+          <Typography
+            sx={{
+              mt: 0.3,
+
+              fontSize: 12,
+
+              color: isDark
+                ? "rgba(255,255,255,0.65)"
+                : "#64748b",
+            }}
+          >
+            Cinematic 3D Wealth
+            Flow Visualization
+          </Typography>
         </Box>
 
-        {/* CHART */}
-        <Box sx={{ width: "100%", height: 520 }}>
-          <PlotlyChart
-            data={[
-              // ✅ Principal (controls hover)
-              {
-                x: rows.map((r) => r.beginBalance),
-                y: yLabels,
-                type: "bar",
-                orientation: "h",
-                name: "Principal",
-                customdata: customData,
-                marker: {
-                  color: "#2E7D32",
-                  opacity: 0.9,
-                },
+        {/* RIGHT */}
 
-                hovertemplate:
-                  "<b>Year %{y}</b><br><br>" +
-                  "🟩 Principal: %{customdata[0]:$,.0f}<br>" +
-                  "🟣 RMD: %{customdata[1]:$,.0f}<br>" +
-                  "🔴 Tax: %{customdata[2]:$,.0f}<br>" +
-                  "🟢 Growth: %{customdata[3]:$,.0f}<br><br>" +
-                  "<b>End Balance: %{customdata[4]:$,.0f}</b>" +
-                  "<extra></extra>",
-              },
+        <Box
+          sx={{
+            px: 1.5,
 
-              // ❌ Other bars (no hover)
-              {
-                x: rows.map((r) => r.rmd),
-                y: yLabels,
-                type: "bar",
-                orientation: "h",
-                name: "RMD",
-                marker: { color: "#7B1FA2" },
-                hoverinfo: "skip",
-              },
-              {
-                x: rows.map((r) => r.tax),
-                y: yLabels,
-                type: "bar",
-                orientation: "h",
-                name: "Tax",
-                marker: { color: "#D32F2F" },
-                hoverinfo: "skip",
-              },
-              {
-                x: rows.map((r) => r.growth),
-                y: yLabels,
-                type: "bar",
-                orientation: "h",
-                name: "Growth",
-                marker: { color: "#66BB6A" },
-                hoverinfo: "skip",
-              },
-            ]}
-            layout={{
-              barmode: view === "stack" ? "stack" : "group",
-              hovermode: "closest",
+            py: 0.7,
 
-              // 🔥 Tooltip style
-              hoverlabel: {
-                bgcolor: "#111827",
-                bordercolor: "#1f2937",
-                font: {
-                  color: "#f9fafb",
-                  size: 13,
-                },
-              },
+            borderRadius: "10px",
 
-              plot_bgcolor: mode === "dark" ? "#1e293b" : "#f9fafb",
-              paper_bgcolor: mode === "dark" ? "#1e293b" : "#ffffff",
+            background: isDark
+              ? "rgba(0,212,255,0.08)"
+              : "rgba(14,165,233,0.08)",
 
-              xaxis: {
-                tickprefix: "$",
-                tickformat: ",.0f",
-                gridcolor: mode === "dark" ? "#334155" : "#eee",
-              },
+            border: isDark
+              ? "1px solid rgba(0,212,255,0.12)"
+              : "1px solid rgba(14,165,233,0.12)",
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: 11,
 
-              yaxis: {
-                automargin: true,
-                gridcolor: mode === "dark" ? "#334155" : "#eee",
-              },
+              fontWeight: 700,
 
-              legend: {
-                orientation: "h",
-                y: -0.25,
-                x: 0.5,
-                xanchor: "center",
-              },
+              color: "#38bdf8",
 
-              shapes,
-              margin: { t: 40, l: 120, r: 20, b: 80 },
+              letterSpacing:
+                "0.2px",
             }}
-
-            
-            onHover={(e) => {
-              if (e.points && e.points.length > 0) {
-                setHoverIndex(e.points[0].pointIndex);
-              }
-            }}
-            onUnhover={() => setHoverIndex(null)}
-          />
+          >
+            LIVE
+          </Typography>
         </Box>
+      </Box>
 
-      </CardContent>
-    </Card>
+      {/* =====================================================
+          CHART
+      ===================================================== */}
+
+      <Box
+        sx={{
+          borderRadius: "18px",
+
+          overflow: "hidden",
+
+          border: isDark
+            ? "1px solid rgba(255,255,255,0.04)"
+            : "1px solid rgba(15,23,42,0.06)",
+
+          background: isDark
+            ? "#020617"
+            : "#ffffff",
+
+          height: "420px",
+        }}
+      >
+        <CascadeFlow3D />
+      </Box>
+    </Box>
   );
 };
 
-export default WaterfallProjection;
+export default WaterfallChart;

@@ -1,6 +1,8 @@
+/* eslint-disable no-unused-vars */
+/* eslint-disable react-hooks/purity */
 import { useState, useMemo } from "react";
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Text, Html } from "@react-three/drei";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, Text, Html, Sparkles } from "@react-three/drei";
  
 const ThreeDScene = ({ data, formatCurrency }) => {
   const [hoveredIndex, setHoveredIndex] = useState(null);
@@ -15,6 +17,7 @@ const ThreeDScene = ({ data, formatCurrency }) => {
     const chartWidth = 22;
     const spacing = chartWidth / numPoints;
     const barWidth = spacing * 0.25;
+ 
  
     return {
       maxVal: max,
@@ -35,10 +38,29 @@ const ThreeDScene = ({ data, formatCurrency }) => {
  
   return (
     <group position={[0, -4, 0]}>
-    
-      <gridHelper args={[26, 26, "#e5e7eb", "#f3f4f6"]} position={[0, 0, 0]} />
+      <points>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={2000}
+            array={new Float32Array(
+              Array.from({ length: 2000 * 3 }, () => (Math.random() - 0.5) * 80)
+            )}
+            itemSize={3}
+          />
+        </bufferGeometry>
  
-      
+        <pointsMaterial
+          size={0.08}
+          color="#ffffff"
+          transparent
+          opacity={0.8}
+        />
+      </points>
+   
+      <gridHelper args={[26, 26, "#334155", "#1e293b"]} position={[0, 0, 0]} />
+ 
+     
       {[0.25, 0.5, 0.75, 1].map((step) => {
         const yValue = maxVal * step;
         const yHeight = 10 * step;
@@ -51,7 +73,7 @@ const ThreeDScene = ({ data, formatCurrency }) => {
             <Text
               position={[-13.5, yHeight, 0]}
               fontSize={0.8}
-              color="#000000"
+              color="#ffffff"
               fontWeight="bold"
               anchorX="right"
               anchorY="middle"
@@ -80,7 +102,7 @@ const ThreeDScene = ({ data, formatCurrency }) => {
             <Text
               position={[0, -1.5, 3]}
               fontSize={0.7}
-              color="#000000"
+              color="#ffffff"
               fontWeight="bold"
               anchorX="center"
               anchorY="middle"
@@ -101,28 +123,32 @@ const ThreeDScene = ({ data, formatCurrency }) => {
             return (
               <mesh
                 key={`${i}-${j}`}
-                position={[b.offset, height / 2, 0]}
+                position={[
+                  b.offset,
+                  height / 2 + Math.sin(i + j + Date.now() * 0.001) * 0.03,
+                  0,
+                ]}
                 castShadow
                 receiveShadow
               >
-                <boxGeometry args={[spacingX * 0.22, height, 0.4]} />
+                <cylinderGeometry args={[0.12, 0.18, height, 32]} />
                 <meshPhysicalMaterial
                   color={b.color}
-                  roughness={0.2}
-                  metalness={0.1}
+                  roughness={0.05}
+                  metalness={0.5}
                   clearcoat={isHovered ? 1 : 0}
                   clearcoatRoughness={0.1}
                   emissive={b.color}
-                  emissiveIntensity={isHovered ? 0.3 : 0}
+                  emissiveIntensity={isHovered ? 1.5 : 0.5}
                 />
               </mesh>
             );
           })}
  
-          
+         
           {hoveredIndex === i && (
             <Html
-              position={[0, Math.max(...d.bars.map((b) => b.value * scaleY)) + 1, 0]}
+              position={[0, Math.max(...d.bars.map((b) => b.value * scaleY)) - 2, 0]}
               center
               style={{ pointerEvents: "none", zIndex: 100 }}
             >
@@ -191,8 +217,16 @@ const ThreeDScene = ({ data, formatCurrency }) => {
  
 const ThreeDBarChart = ({ data, formatCurrency }) => {
   return (
-    <Canvas camera={{ position: [0, 4, 23], fov: 45 }} shadows>
-      <ambientLight intensity={0.7} />
+    <Canvas
+      camera={{ position: [0, 5, 18], fov: 42 }} shadows
+      shadows
+      style={{
+        background: "#020617",
+        borderRadius: "20px",
+      }}
+    >
+      <ambientLight intensity={0.5} />
+      <pointLight position={[0, 10, 0]} intensity={2} color="#00ffff" />
       <directionalLight
         position={[15, 20, 10]}
         intensity={1}
@@ -214,9 +248,31 @@ const ThreeDBarChart = ({ data, formatCurrency }) => {
         minDistance={10}
         maxDistance={50}
       />
+      {/* <Stars
+        radius={80}
+        depth={50}
+        count={4000}
+        factor={4}
+        saturation={0}
+        fade
+        speed={5}
+      /> */}
+      <Sparkles
+        count={220}
+        scale={[
+          34,
+          16,
+          34,
+        ]}
+        size={3}
+        speed={0.45}
+        opacity={0.65}
+        color="#ffffff"
+      />
       <ThreeDScene data={data} formatCurrency={formatCurrency} />
     </Canvas>
   );
 };
  
 export default ThreeDBarChart;
+ 
