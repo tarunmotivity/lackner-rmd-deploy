@@ -1,5 +1,5 @@
 const calculateSchedule = require("../services/rmdCalculator");
-const RmdScenario = require("../models/RmdScenario");
+const RmdScenario = require("../models/rmdScenario");
 
 exports.calculateRmd = async (req, res) => {
   try {
