@@ -1,18 +1,35 @@
+import { useState } from "react";
+
 import {
   Box,
   Typography,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 
 import CascadeFlow3D from "./CascadeFlow3D";
 
+import PlotlyChart from "./PlotlyChart";
+
 import { useThemeContext } from "../context/ThemeContext";
+
+import useRmd from "../hooks/useRmd";
 
 const WaterfallChart = () => {
   const { mode } =
     useThemeContext();
 
+  const { result } =
+    useRmd();
+
   const isDark =
     mode === "dark";
+
+  const [view, setView] =
+    useState("3d");
+    
+const rows =
+  result?.rows || [];
 
   return (
     <Box
@@ -34,8 +51,6 @@ const WaterfallChart = () => {
         boxShadow: isDark
           ? "0 12px 35px rgba(0,0,0,0.4)"
           : "0 6px 20px rgba(15,23,42,0.08)",
-
-        backdropFilter: "blur(10px)",
 
         p: 2,
 
@@ -69,10 +84,6 @@ const WaterfallChart = () => {
           border: isDark
             ? "1px solid rgba(255,255,255,0.08)"
             : "1px solid rgba(15,23,42,0.08)",
-
-          boxShadow: isDark
-            ? "0 6px 18px rgba(0,0,0,0.3)"
-            : "0 4px 12px rgba(15,23,42,0.06)",
         }}
       >
         {/* LEFT */}
@@ -105,45 +116,70 @@ const WaterfallChart = () => {
                 : "#64748b",
             }}
           >
-            Cinematic 3D Wealth
-            Flow Visualization
+            Interactive Wealth Flow
+            Visualization
           </Typography>
         </Box>
 
-        {/* RIGHT */}
+        {/* RIGHT TOGGLE */}
 
-        <Box
+        <ToggleButtonGroup
+          value={view}
+          exclusive
+          onChange={(_, v) =>
+            v && setView(v)
+          }
+          size="small"
           sx={{
-            px: 1.5,
-
-            py: 0.7,
-
-            borderRadius: "10px",
-
             background: isDark
-              ? "rgba(0,212,255,0.08)"
-              : "rgba(14,165,233,0.08)",
+              ? "rgba(15,23,42,0.9)"
+              : "#f1f5f9",
 
-            border: isDark
-              ? "1px solid rgba(0,212,255,0.12)"
-              : "1px solid rgba(14,165,233,0.12)",
+            borderRadius: "14px",
+
+            p: 0.4,
+
+            "& .MuiToggleButton-root":
+              {
+                border: 0,
+
+                color: isDark
+                  ? "#94a3b8"
+                  : "#475569",
+
+                px: 2,
+
+                py: 0.8,
+
+                fontWeight: 700,
+
+                textTransform:
+                  "none",
+
+                borderRadius:
+                  "10px",
+
+                "&.Mui-selected":
+                  {
+                    background:
+                      "linear-gradient(135deg, #2563eb, #3b82f6)",
+
+                    color: "#fff",
+
+                    boxShadow:
+                      "0 4px 14px rgba(37,99,235,0.35)",
+                  },
+              },
           }}
         >
-          <Typography
-            sx={{
-              fontSize: 11,
+          <ToggleButton value="3d">
+            Projection
+          </ToggleButton>
 
-              fontWeight: 700,
-
-              color: "#38bdf8",
-
-              letterSpacing:
-                "0.2px",
-            }}
-          >
-            LIVE
-          </Typography>
-        </Box>
+          <ToggleButton value="2d">
+            Waterfall
+          </ToggleButton>
+        </ToggleButtonGroup>
       </Box>
 
       {/* =====================================================
@@ -167,7 +203,279 @@ const WaterfallChart = () => {
           height: "420px",
         }}
       >
-        <CascadeFlow3D />
+        {view === "3d" ? (
+          <CascadeFlow3D />
+        ) : (
+          <PlotlyChart
+  data={[
+    {
+      x: rows.map(
+        (r) => r.growth
+      ),
+
+      y: rows.map(
+        (r) => `${r.year}`
+      ),
+
+      type: "bar",
+
+      orientation: "h",
+
+      name: "Growth",
+
+      marker: {
+        color: "#86efac",
+      },
+
+      customdata: rows.map(
+        (r) => [
+          r.beginBalance,
+          r.rmd,
+          r.tax,
+          r.growth,
+          r.endBalance,
+        ]
+      ),
+
+      hovertemplate:
+        "<span style='font-size:16px;font-weight:700;color:#38bdf8'>" +
+        "Financial Projection" +
+        "</span><br><br>" +
+
+        "<b>Year:</b> %{y}<br>" +
+
+        "<b>End Balance:</b> %{customdata[4]:$,.0f}<br><br>" +
+
+        "<span style='color:#84cc16'><b>Principal:</b></span> %{customdata[0]:$,.0f}<br>" +
+
+        "<span style='color:#22c55e'><b>Growth:</b></span> %{customdata[3]:$,.0f}<br>" +
+
+        "<span style='color:#ef4444'><b>Tax:</b></span> %{customdata[2]:$,.0f}<br>" +
+
+        "<span style='color:#a855f7'><b>RMD:</b></span> %{customdata[1]:$,.0f}" +
+
+        "<extra></extra>",
+    },
+
+    {
+      x: rows.map(
+        (r) =>
+          r.beginBalance
+      ),
+
+      y: rows.map(
+        (r) => `${r.year}`
+      ),
+
+      type: "bar",
+
+      orientation: "h",
+
+      name: "Principal",
+
+      marker: {
+        color: "#65a30d",
+      },
+
+      customdata: rows.map(
+        (r) => [
+          r.beginBalance,
+          r.rmd,
+          r.tax,
+          r.growth,
+          r.endBalance,
+        ]
+      ),
+
+      hovertemplate:
+        "<span style='font-size:16px;font-weight:700;color:#38bdf8'>" +
+        "Financial Projection" +
+        "</span><br><br>" +
+
+        "<b>Year:</b> %{y}<br>" +
+
+        "<b>End Balance:</b> %{customdata[4]:$,.0f}<br><br>" +
+
+        "<span style='color:#84cc16'><b>Principal:</b></span> %{customdata[0]:$,.0f}<br>" +
+
+        "<span style='color:#22c55e'><b>Growth:</b></span> %{customdata[3]:$,.0f}<br>" +
+
+        "<span style='color:#ef4444'><b>Tax:</b></span> %{customdata[2]:$,.0f}<br>" +
+
+        "<span style='color:#a855f7'><b>RMD:</b></span> %{customdata[1]:$,.0f}" +
+
+        "<extra></extra>",
+    },
+
+    {
+      x: rows.map(
+        (r) => r.rmd
+      ),
+
+      y: rows.map(
+        (r) => `${r.year}`
+      ),
+
+      type: "bar",
+
+      orientation: "h",
+
+      name: "RMD",
+
+      marker: {
+        color: "#9333ea",
+      },
+
+      customdata: rows.map(
+        (r) => [
+          r.beginBalance,
+          r.rmd,
+          r.tax,
+          r.growth,
+          r.endBalance,
+        ]
+      ),
+
+      hovertemplate:
+        "<span style='font-size:16px;font-weight:700;color:#38bdf8'>" +
+        "Financial Projection" +
+        "</span><br><br>" +
+
+        "<b>Year:</b> %{y}<br>" +
+
+        "<b>End Balance:</b> %{customdata[4]:$,.0f}<br><br>" +
+
+        "<span style='color:#84cc16'><b>Principal:</b></span> %{customdata[0]:$,.0f}<br>" +
+
+        "<span style='color:#22c55e'><b>Growth:</b></span> %{customdata[3]:$,.0f}<br>" +
+
+        "<span style='color:#ef4444'><b>Tax:</b></span> %{customdata[2]:$,.0f}<br>" +
+
+        "<span style='color:#a855f7'><b>RMD:</b></span> %{customdata[1]:$,.0f}" +
+
+        "<extra></extra>",
+    },
+
+    {
+      x: rows.map(
+        (r) => r.tax
+      ),
+
+      y: rows.map(
+        (r) => `${r.year}`
+      ),
+
+      type: "bar",
+
+      orientation: "h",
+
+      name: "Tax",
+
+      marker: {
+        color: "#ef4444",
+      },
+
+      customdata: rows.map(
+        (r) => [
+          r.beginBalance,
+          r.rmd,
+          r.tax,
+          r.growth,
+          r.endBalance,
+        ]
+      ),
+
+      hovertemplate:
+        "<span style='font-size:16px;font-weight:700;color:#38bdf8'>" +
+        "Financial Projection" +
+        "</span><br><br>" +
+
+        "<b>Year:</b> %{y}<br>" +
+
+        "<b>End Balance:</b> %{customdata[4]:$,.0f}<br><br>" +
+
+        "<span style='color:#84cc16'><b>Principal:</b></span> %{customdata[0]:$,.0f}<br>" +
+
+        "<span style='color:#22c55e'><b>Growth:</b></span> %{customdata[3]:$,.0f}<br>" +
+
+        "<span style='color:#ef4444'><b>Tax:</b></span> %{customdata[2]:$,.0f}<br>" +
+
+        "<span style='color:#a855f7'><b>RMD:</b></span> %{customdata[1]:$,.0f}" +
+
+        "<extra></extra>",
+    },
+  ]}
+  layout={{
+    hovermode: "closest",
+
+    barmode: "stack",
+
+    paper_bgcolor:
+      "transparent",
+
+    plot_bgcolor:
+      "transparent",
+
+    font: {
+      color: isDark
+        ? "#e2e8f0"
+        : "#0f172a",
+    },
+
+    margin: {
+      t: 20,
+      l: 70,
+      r: 20,
+      b: 40,
+    },
+
+    xaxis: {
+      tickprefix: "$",
+
+      tickformat: ",.0f",
+
+      gridcolor: isDark
+        ? "#1e293b"
+        : "#e2e8f0",
+
+      zeroline: false,
+    },
+
+    yaxis: {
+      autorange: "reversed",
+
+      gridcolor: isDark
+        ? "#1e293b"
+        : "#e2e8f0",
+    },
+
+    legend: {
+      orientation: "h",
+
+      y: -0.18,
+
+      x: 0.5,
+
+      xanchor: "center",
+    },
+
+    hoverlabel: {
+      bgcolor: "#071226",
+
+      bordercolor: "#1e3a8a",
+
+      font: {
+        color: "#ffffff",
+        size: 13,
+        family:
+          "Inter, sans-serif",
+      },
+
+      align: "left",
+    },
+  }}
+/>
+        )}
       </Box>
     </Box>
   );
