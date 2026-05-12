@@ -624,7 +624,7 @@ const CascadeFlow3D = () => {
   const rows =
     result?.rows?.slice(
       0,
-      16
+      20
     ) || [];
 
   if (!rows.length)
