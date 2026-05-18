@@ -169,6 +169,46 @@ const CascadeFlow3D = ({ mode = "PROJECTION" }) => {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   if (!data.length) return null;
+  const rows =
+    result?.rows?.slice(
+      0,
+      20
+    ) || [];
+
+  if (!rows.length)
+    return null;
+
+  const maxBalance =
+    Math.max(
+      ...rows.map(
+        (r) =>
+          r.endBalance
+      )
+    );
+
+  const maxGrowth =
+    Math.max(
+      ...rows.map(
+        (r) =>
+          r.growth || 0
+      )
+    );
+
+  const maxTax =
+    Math.max(
+      ...rows.map(
+        (r) =>
+          r.tax || 0
+      )
+    );
+
+  const maxRmd =
+    Math.max(
+      ...rows.map(
+        (r) =>
+          r.rmd || 0
+      )
+    );
 
   const handleMouseMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
