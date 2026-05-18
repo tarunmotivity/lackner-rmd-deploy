@@ -1,1041 +1,215 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
 
-import React, {
-  useMemo,
-  useState,
-} from "react";
-
-import { Canvas } from "@react-three/fiber";
-
-import {
-  OrbitControls,
-  PerspectiveCamera,
-  Sparkles,
-  Environment,
-  Html,
-  Line,
-  Text,
-} from "@react-three/drei";
-
-import {
-  EffectComposer,
-  Bloom,
-  Vignette,
-} from "@react-three/postprocessing";
-
+import React, { useMemo, useState, useRef, useEffect } from "react";
+import { useFrame } from "@react-three/fiber";
+import { Html, Text, Float, Line } from "@react-three/drei";
 import * as THREE from "three";
-
 import useRmd from "../hooks/useRmd";
+import { 
+  CinematicCanvas, 
+  CinematicCamera, 
+  CinematicTooltip,
+  CinematicLegend,
+  CinematicLabel
+} from "./CinematicSystem";
 
-// ======================================================
-// NORMALIZE
-// ======================================================
-
-const normalize = (
-  value,
-  max,
-  amplitude
-) => {
-  if (!max || max === 0)
-    return 0;
-
-  return (
-    (value / max) *
-    amplitude
-  );
+const normalize = (value, max, width) => {
+  if (!max || max === 0) return 0;
+  return (value / max) * width;
 };
 
 // ======================================================
-// TOOLTIP
+// MILESTONE MARKER
 // ======================================================
 
-const FinancialTooltip = ({
-  row,
-}) => {
-  const principal =
-    row.endBalance -
-    row.growth;
+const MilestoneMarker = ({ pos, row, index, total, progress, onHover }) => {
+  const [hovered, setHovered] = useState(false);
+  const groupRef = useRef();
+
+  useFrame((state) => {
+    if (groupRef.current) {
+      const trigger = index / total;
+      const p = THREE.MathUtils.clamp((progress - trigger) * 4, 0, 1);
+      groupRef.current.visible = p > 0;
+      groupRef.current.scale.setScalar(THREE.MathUtils.lerp(groupRef.current.scale.x, p, 0.1));
+    }
+  });
 
   return (
-    <div
-      style={{
-        background:
-          "rgba(15,23,42,0.96)",
-
-        border:
-          "1px solid rgba(255,255,255,0.08)",
-
-        borderRadius:
-          "14px",
-
-        padding: "12px",
-
-        minWidth: "220px",
-
-        color: "white",
-
-        backdropFilter:
-          "blur(12px)",
-
-        boxShadow:
-          "0 0 16px rgba(0,212,255,0.12)",
-
-        pointerEvents:
-          "none",
-      }}
-    >
-      <div
-        style={{
-          color: "#38bdf8",
-          fontWeight: 700,
-          marginBottom:
-            "10px",
-          fontSize: "15px",
-        }}
-      >
-        Financial Projection
-      </div>
-
-      <div>
-        Year: {row.year}
-      </div>
-
-      <div>
-        Age: {row.age}
-      </div>
-
-      <div
-        style={{
-          color: "#ffffff",
-        }}
-      >
-        Balance: $
-        {Math.round(
-          row.endBalance
-        ).toLocaleString()}
-      </div>
-
-      <div
-        style={{
-          color: "#00d4ff",
-        }}
-      >
-        Principal: $
-        {Math.round(
-          principal
-        ).toLocaleString()}
-      </div>
-
-      <div
-        style={{
-          color: "#22c55e",
-        }}
-      >
-        Growth: $
-        {Math.round(
-          row.growth
-        ).toLocaleString()}
-      </div>
-
-      <div
-        style={{
-          color: "#ef4444",
-        }}
-      >
-        Tax: $
-        {Math.round(
-          row.tax
-        ).toLocaleString()}
-      </div>
-
-      <div
-        style={{
-          color: "#8b5cf6",
-        }}
-      >
-        RMD: $
-        {Math.round(
-          row.rmd || 0
-        ).toLocaleString()}
-      </div>
-    </div>
-  );
-};
-
-// ======================================================
-// AXES
-// ======================================================
-
-const Axes = () => {
-  return (
-    <group>
-      <Line
-        points={[
-          [-12, 0, 2],
-          [12, 0, 2],
-        ]}
-        color="#00d4ff"
-        lineWidth={1}
-      />
-
-      <Line
-        points={[
-          [-12, 0, 2],
-          [-12, 6, 2],
-        ]}
-        color="#00d4ff"
-        lineWidth={1}
-      />
-
-      <Line
-        points={[
-          [-12, 0, 2],
-          [-12, 0, -12],
-        ]}
-        color="#00d4ff"
-        lineWidth={1}
-      />
-
-      <Text
-        position={[12.5, 0, 2]}
-        fontSize={0.2}
-        color="#67e8f9"
-      >
-        Time
-      </Text>
-
-      <Text
-        position={[
-          -12,
-          6.3,
-          2,
-        ]}
-        fontSize={0.2}
-        color="#67e8f9"
-      >
-        Wealth
-      </Text>
-
-      <Text
-        position={[
-          -12,
-          0,
-          -12.8,
-        ]}
-        fontSize={0.2}
-        color="#67e8f9"
-      >
-        Years
-      </Text>
+    <group ref={groupRef} visible={false} scale={[0,0,0]}>
+      <Float speed={4} rotationIntensity={0.5} floatIntensity={0.5}>
+        <group position={pos}>
+          <mesh onPointerOver={(e) => { e.stopPropagation(); setHovered(true); onHover(row); }} onPointerOut={() => { setHovered(false); onHover(null); }}>
+            <sphereGeometry args={[0.8, 12, 12]} />
+            <meshBasicMaterial transparent opacity={0} />
+          </mesh>
+          <mesh>
+            <sphereGeometry args={[hovered ? 0.25 : 0.12, 32, 32]} />
+            <meshStandardMaterial color="#ffffff" emissive="#00f2ff" emissiveIntensity={hovered ? 10 : 2} metalness={1} roughness={0} />
+          </mesh>
+        </group>
+      </Float>
     </group>
   );
 };
 
 // ======================================================
-// WATERFALL LAYER
+// PROJECTION SCENE
 // ======================================================
 
-const WaterfallLayer = ({
-  rows,
-  type,
-  color,
-  offsetY,
-  maxValue,
-  amplitude,
-  opacity = 0.85,
-}) => {
-  const curves =
-    useMemo(() => {
-      return rows.map(
-        (row, rowIndex) => {
-          const points = [];
-
-          const z =
-            -rowIndex *
-            0.7;
-
-          let raw = 0;
-
-          if (
-            type ===
-            "balance"
-          ) {
-            raw =
-              row.endBalance;
-          }
-
-          if (
-            type ===
-            "principal"
-          ) {
-            raw =
-              row.endBalance -
-              row.growth;
-          }
-
-          if (
-            type ===
-            "growth"
-          ) {
-            raw =
-              row.growth;
-          }
-
-          if (
-            type === "tax"
-          ) {
-            raw =
-              row.tax;
-          }
-
-          if (
-            type === "rmd"
-          ) {
-            raw =
-              row.rmd || 0;
-          }
-
-          const normalized =
-            normalize(
-              raw,
-              maxValue,
-              amplitude
-            );
-
-          for (
-            let i = 0;
-            i < 90;
-            i++
-          ) {
-            const t =
-              i / 89;
-
-            const x =
-              t * 18 - 9;
-
-            const slope =
-              Math.sin(
-                t * Math.PI
-              ) *
-              normalized;
-
-            const ripple =
-              Math.sin(
-                t * 8 +
-                  rowIndex *
-                    0.2
-              ) *
-              normalized *
-              0.018;
-
-            const y =
-              slope +
-              ripple +
-              offsetY;
-
-            points.push(
-              new THREE.Vector3(
-                x,
-                y,
-                z
-              )
-            );
-          }
-
-          return {
-            row,
-            points,
-          };
-        }
-      );
-    }, [
-      rows,
-      type,
-      maxValue,
-      amplitude,
-      offsetY,
-    ]);
-
-  return (
-    <group>
-      {curves.map(
-        (
-          curve,
-          curveIndex
-        ) => (
-          <group
-            key={curveIndex}
-          >
-            <Line
-              points={
-                curve.points
-              }
-              color={color}
-              lineWidth={1.5}
-              transparent
-              opacity={0.03}
-            />
-
-            <Line
-              points={
-                curve.points
-              }
-              color={color}
-              lineWidth={0.9}
-              transparent
-              opacity={opacity}
-            />
-
-            {curve.points
-              .filter(
-                (_, i) =>
-                  i % 45 === 0
-              )
-              .map(
-                (
-                  p,
-                  i
-                ) => (
-                  <Line
-                    key={i}
-                    points={[
-                      [
-                        p.x,
-                        0,
-                        p.z,
-                      ],
-                      [
-                        p.x,
-                        p.y,
-                        p.z,
-                      ],
-                    ]}
-                    color={
-                      color
-                    }
-                    lineWidth={
-                      0.15
-                    }
-                    transparent
-                    opacity={
-                      0.02
-                    }
-                  />
-                )
-              )}
-          </group>
-        )
-      )}
-    </group>
-  );
-};
-
-// ======================================================
-// HOVER
-// ======================================================
-
-const HoverInteractionLayer = ({
-  rows,
-  maxBalance,
-}) => {
-  const [hovered, setHovered] =
-    useState(null);
+const ProjectionScene = ({ data, maxBalance, width, amplitude, onHover }) => {
+  const areaRef = useRef();
+  const startTRef = useRef(-1);
+  const [progress, setProgress] = useState(0);
 
   const points = useMemo(() => {
-    return rows.map((row, i) => {
-      const x =
-        (i / (rows.length - 1)) *
-          18 -
-        9;
-
-      const z = -i * 0.7;
-
-      const normalized =
-        normalize(
-          row.endBalance,
-          maxBalance,
-          3
-        );
-
-      const t =
-        i / (rows.length - 1);
-
-      const slope = Math.sin(
-        t * Math.PI
-      ) * normalized;
-
-      const ripple =
-        Math.sin(
-          t * 8 + i * 0.2
-        ) *
-        normalized *
-        0.018;
-
-      const y =
-        slope + ripple + 0.3;
-
-      return {
-        row,
-        position: [x, y, z],
-      };
+    return data.map((row, i) => {
+      const t = i / (data.length - 1);
+      const x = t * width - width / 2;
+      return [x, (row.endBalance / maxBalance) * amplitude, 0];
     });
-  }, [rows, maxBalance]);
+  }, [data, maxBalance]);
+
+  useFrame((state) => {
+    if (startTRef.current === -1) startTRef.current = state.clock.elapsedTime;
+    const elapsed = state.clock.elapsedTime - startTRef.current;
+    const p = THREE.MathUtils.clamp(elapsed / 3, 0, 1);
+    setProgress(p);
+    
+    if (areaRef.current) {
+      areaRef.current.visible = p > 0.5;
+      areaRef.current.scale.y = THREE.MathUtils.lerp(areaRef.current.scale.y, p > 0.5 ? 1 : 0, 0.1);
+    }
+  });
+
+  const areaGeometry = useMemo(() => {
+    const s = new THREE.Shape();
+    s.moveTo(points[0][0], 0);
+    points.forEach(p => s.lineTo(p[0], p[1]));
+    s.lineTo(points[points.length - 1][0], 0);
+    s.closePath();
+    return new THREE.ShapeGeometry(s);
+  }, [points]);
 
   return (
     <group>
-      {points.map(
-        (point, index) => (
-          <group key={index}>
-            {/* GUIDE LINE */}
-            <Line
-              points={[
-                [
-                  point.position[0],
-                  0,
-                  point.position[2],
-                ],
-                [
-                  point.position[0],
-                  point.position[1],
-                  point.position[2],
-                ],
-              ]}
-              color="#ffffff"
-              lineWidth={0.25}
-              transparent
-              opacity={0.05}
-            />
-
-            {/* GLOW SPHERE */}
-            <mesh
-              position={
-                point.position
-              }
-              onPointerOver={(e) => {
-                e.stopPropagation();
-                document.body.style.cursor =
-                  "pointer";
-                setHovered(index);
-              }}
-              onPointerOut={(e) => {
-                e.stopPropagation();
-                document.body.style.cursor =
-                  "default";
-                setHovered(null);
-              }}
-            >
-              <sphereGeometry
-                args={[
-                  hovered === index
-                    ? 0.16
-                    : 0.11,
-                  24,
-                  24,
-                ]}
-              />
-
-              <meshStandardMaterial
-                color={
-                  hovered === index
-                    ? "#ffffff"
-                    : "#00d4ff"
-                }
-                emissive="#00d4ff"
-                emissiveIntensity={
-                  hovered === index
-                    ? 3
-                    : 1.8
-                }
-              />
-            </mesh>
-
-            {/* INVISIBLE BIGGER HIT AREA */}
-            <mesh
-              position={
-                point.position
-              }
-              onPointerOver={(e) => {
-                e.stopPropagation();
-                setHovered(index);
-              }}
-              onPointerOut={() =>
-                setHovered(null)
-              }
-            >
-              <sphereGeometry
-                args={[0.45, 12, 12]}
-              />
-
-              <meshBasicMaterial
-                transparent
-                opacity={0}
-              />
-            </mesh>
-
-            {/* TOOLTIP */}
-            {hovered === index && (
-              <Html
-                position={[
-                  point.position[0],
-                  point.position[1] +
-                    1,
-                  point.position[2],
-                ]}
-                center
-                distanceFactor={8}
-                zIndexRange={[
-                  100,
-                  0,
-                ]}
-                style={{
-                  pointerEvents:
-                    "none",
-                  userSelect: "none",
-                }}
-              >
-                <div
-                  style={{
-                    transform:
-                      "translateY(-10px)",
-                    animation:
-                      "fadeIn 0.18s ease-out",
-                  }}
-                >
-                  <FinancialTooltip
-                    row={point.row}
-                  />
-                </div>
-              </Html>
-            )}
-          </group>
-        )
-      )}
+      <mesh ref={areaRef} geometry={areaGeometry} scale={[1, 0, 1]} visible={false}>
+        <meshBasicMaterial color="#0ea5e9" transparent opacity={0.05} side={THREE.DoubleSide} />
+      </mesh>
+      <Line points={points} color="#00f2ff" lineWidth={3} transparent opacity={0.9} />
+      {data.map((row, i) => {
+        if (i % 10 !== 0) return null;
+        return <MilestoneMarker key={i} pos={points[i]} row={row} index={i} total={data.length} progress={progress} onHover={onHover} />;
+      })}
     </group>
   );
 };
 
 // ======================================================
-// MAIN
+// WATERFALL 3D BAR
 // ======================================================
 
-const CascadeFlow3D = () => {
-  const { result } = useRmd();
+const WaterfallBar = ({ row, maxVal, width, index, onHover }) => {
+  const [hovered, setHovered] = useState(null);
+  const startTRef = useRef(-1);
+  const meshRefs = useRef([]);
 
-  const rows =
-    result?.rows?.slice(
-      0,
-      20
-    ) || [];
+  useFrame((state) => {
+    if (startTRef.current === -1) startTRef.current = state.clock.elapsedTime;
+    const elapsed = state.clock.elapsedTime - startTRef.current;
+    const trigger = index * 0.1;
+    const p = THREE.MathUtils.clamp((elapsed - trigger) * 4, 0, 1);
+    meshRefs.current.forEach(m => { if (m) { m.scale.y = p; m.visible = p > 0; } });
+  });
 
-  if (!rows.length)
-    return null;
+  const segments = useMemo(() => {
+    const growth = row.growth || 0;
+    const tax = row.tax || 0;
+    const rmd = row.rmd || 0;
+    const end = row.endBalance || 0;
+    const start = row.startBalance || (end - growth + tax + rmd);
+    return [
+      { width: normalize(start, maxVal, width), color: "#a3e635", key: "startBalance", label: "Start Balance" },
+      { width: normalize(growth, maxVal, width), color: "#10b981", key: "growth", label: "Growth" },
+      { width: normalize(tax, maxVal, width), color: "#f43f5e", key: "tax", label: "Tax" },
+      { width: normalize(rmd, maxVal, width), color: "#a855f7", key: "rmd", label: "RMD" }
+    ];
+  }, [row, maxVal, width]);
 
-  const maxBalance =
-    Math.max(
-      ...rows.map(
-        (r) =>
-          r.endBalance
-      )
-    );
-
-  const maxGrowth =
-    Math.max(
-      ...rows.map(
-        (r) =>
-          r.growth || 0
-      )
-    );
-
-  const maxTax =
-    Math.max(
-      ...rows.map(
-        (r) =>
-          r.tax || 0
-      )
-    );
-
-  const maxRmd =
-    Math.max(
-      ...rows.map(
-        (r) =>
-          r.rmd || 0
-      )
-    );
-
-  const maxPrincipal =
-    Math.max(
-      ...rows.map(
-        (r) =>
-          r.endBalance -
-          r.growth
-      )
-    );
-
-  const totalTax =
-    rows.reduce(
-      (s, r) =>
-        s + r.tax,
-      0
-    );
-
-  const totalGrowth =
-    rows.reduce(
-      (s, r) =>
-        s + r.growth,
-      0
-    );
+  let currentX = -width / 2;
 
   return (
-    <div
-      style={{
-        width: "100%",
-        height: "520px",
+    <group position={[0, -index * 0.45, 0]}>
+      {segments.map((seg, i) => {
+        const segWidth = seg.width;
+        const pos = currentX + segWidth / 2;
+        currentX += segWidth;
+        if (segWidth < 0.01) return null;
+        return (
+          <mesh 
+            key={seg.key} ref={el => meshRefs.current[i] = el} position={[pos, 0, 0]} 
+            onPointerOver={(e) => { e.stopPropagation(); setHovered(seg.key); onHover(row); }} 
+            onPointerOut={() => { setHovered(null); onHover(null); }}
+            scale={[1, 0, 1]} visible={false}
+          >
+            <boxGeometry args={[segWidth, 0.35, 0.1]} />
+            <meshStandardMaterial color={seg.color} emissive={seg.color} emissiveIntensity={hovered === seg.key ? 2 : 0.4} metalness={0.8} roughness={0.1} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+};
 
-        borderRadius:
-          "18px",
+const CascadeFlow3D = ({ mode = "PROJECTION" }) => {
+  const { result } = useRmd();
+  const data = useMemo(() => result?.rows || [], [result]);
+  const [hoveredData, setHoveredData] = useState(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-        overflow:
-          "hidden",
+  if (!data.length) return null;
 
-        position:
-          "relative",
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
 
-        background:
-          "radial-gradient(circle at center, #020617 0%, #000000 100%)",
-      }}
-    >
-      {/* HUD */}
+  const legendItems = mode === "PROJECTION" 
+    ? [{ label: "Wealth Stream", color: "#00f2ff" }, { label: "Milestones", color: "#ffffff" }]
+    : [{ label: "Start Balance", color: "#a3e635" }, { label: "Growth", color: "#10b981" }, { label: "Taxes", color: "#f43f5e" }, { label: "RMDs", color: "#a855f7" }];
 
-      <div
-        style={{
-          position:
-            "absolute",
+  return (
+    <div style={{ width: "100%", height: "100%", position: "relative", background: "#010409" }}>
+      <CinematicCanvas cameraPos={mode === "WATERFALL" ? [12, 5, 20] : [0, 5, 20]} onMouseMove={handleMouseMove}>
+        <CinematicCamera orbitSpeed={0.3} driftAmount={0} />
+        <group position={[0, mode === "WATERFALL" ? 8 : -3, 0]}>
+          <gridHelper args={[80, 40, "#1e293b", "#0f172a"]} rotation={[mode === "WATERFALL" ? Math.PI/2 : 0, 0, 0]} opacity={0.2} transparent />
+          {mode === "PROJECTION" ? (
+             <ProjectionScene data={data} maxBalance={Math.max(...data.map(d => d.endBalance || 0), 1)} width={20} amplitude={7} onHover={setHoveredData} />
+          ) : (
+             <group>{data.map((row, i) => <WaterfallBar key={i} row={row} maxVal={Math.max(...data.map(d => d.endBalance || 0), 1) * 1.1} width={20} index={i} onHover={setHoveredData} />)}</group>
+          )}
+        </group>
+      </CinematicCanvas>
+      
+      {hoveredData && (
+        <CinematicTooltip 
+          title={`Age ${hoveredData.age} (${hoveredData.year})`} 
+          mousePos={mousePos}
+          details={[
+            { label: "End Balance", value: hoveredData.endBalance, color: "#00f2ff" },
+            { label: "Growth", value: hoveredData.growth, color: "#10b981" },
+            { label: "Tax", value: hoveredData.tax, color: "#f43f5e" },
+            { label: "RMD", value: hoveredData.rmd, color: "#a855f7" }
+          ]} 
+        />
+      )}
 
-          top: 14,
-          right: 14,
-
-          zIndex: 10,
-
-          width: "220px",
-
-          padding:
-            "12px",
-
-          borderRadius:
-            "16px",
-
-          background:
-            "rgba(15,23,42,0.72)",
-
-          backdropFilter:
-            "blur(12px)",
-
-          border:
-            "1px solid rgba(255,255,255,0.06)",
-
-          color: "white",
-        }}
-      >
-        <div
-          style={{
-            color: "#38bdf8",
-
-            fontWeight: 700,
-
-            fontSize: "16px",
-
-            marginBottom:
-              "10px",
-          }}
-        >
-          Financial Waterfall
-        </div>
-
-        <div
-          style={{
-            lineHeight: 1.7,
-
-            fontSize:
-              "12px",
-          }}
-        >
-          <div>
-            Projection Years:{" "}
-            {rows.length}
-          </div>
-
-          <div>
-            Peak Balance: $
-            {Math.round(
-              maxBalance
-            ).toLocaleString()}
-          </div>
-
-          <div>
-            Total Tax: $
-            {Math.round(
-              totalTax
-            ).toLocaleString()}
-          </div>
-
-          <div>
-            Total Growth:
-            $
-            {Math.round(
-              totalGrowth
-            ).toLocaleString()}
-          </div>
-        </div>
+      <div style={{ position: "absolute", top: "40px", left: "40px", pointerEvents: "none" }}>
+        <CinematicLabel text={mode === "PROJECTION" ? "Wealth Intelligence Stream" : "Lifecycle Distribution Flow"} fontSize="28px" color="#fff" />
       </div>
-
-      {/* CANVAS */}
-
-      <Canvas
-        dpr={[1, 1.2]}
-        gl={{
-          antialias: true,
-          powerPreference:
-            "high-performance",
-        }}
-      >
-        <color
-          attach="background"
-          args={["#020617"]}
-        />
-
-        <fog
-          attach="fog"
-          args={[
-            "#020617",
-            20,
-            50,
-          ]}
-        />
-
-        {/* CAMERA */}
-
-       <PerspectiveCamera
-  makeDefault
-  position={[
-    -12.4,
-    5.9,
-    16.8,
-  ]}
-  fov={49}
- />
-        <OrbitControls
-          enableZoom
-          enableRotate
-          minDistance={10}
-          maxDistance={22}
-          target={[
-            0,
-            1,
-            -4,
-          ]}
-        />
-
-        {/* LIGHTS */}
-
-        <ambientLight
-          intensity={0.75}
-        />
-
-        <directionalLight
-          position={[
-            8,
-            12,
-            6,
-          ]}
-          intensity={1.5}
-        />
-
-        <pointLight
-          position={[
-            -6,
-            7,
-            0,
-          ]}
-          color="#00d4ff"
-          intensity={1.5}
-        />
-
-        {/* ENV */}
-
-        <Environment preset="night" />
-
-        {/* EFFECTS */}
-
-        <EffectComposer>
-          <Bloom
-            intensity={0.28}
-            luminanceThreshold={
-              0.2
-            }
-            mipmapBlur
-          />
-
-          <Vignette
-            eskil={false}
-            offset={0.1}
-            darkness={0.9}
-          />
-        </EffectComposer>
-
-        {/* PARTICLES */}
-
-        <Sparkles
-          count={180}
-          scale={[
-            24,
-            12,
-            24,
-          ]}
-          size={0.5}
-          speed={0.12}
-          opacity={0.35}
-          color="#dfffff"
-          noise={0.35}
-        />
-
-        {/* FLOOR */}
-
-        <mesh
-          rotation={[
-            -Math.PI / 2,
-            0,
-            0,
-          ]}
-          position={[
-            0,
-            -0.2,
-            -4,
-          ]}
-        >
-          <planeGeometry
-            args={[50, 50]}
-          />
-
-          <meshStandardMaterial
-            color="#050816"
-            metalness={0.2}
-            roughness={0.95}
-          />
-        </mesh>
-
-        {/* ORBITAL RINGS */}
-
-        {[5, 8, 11].map(
-          (r, i) => (
-            <mesh
-              key={i}
-              rotation={[
-                -Math.PI / 2,
-                0,
-                i * 0.2,
-              ]}
-              position={[
-                0,
-                0,
-                -4,
-              ]}
-            >
-              <ringGeometry
-                args={[
-                  r,
-                  r + 0.02,
-                  96,
-                ]}
-              />
-
-              <meshBasicMaterial
-                color="#00d4ff"
-                transparent
-                opacity={0.015}
-              />
-            </mesh>
-          )
-        )}
-
-        {/* AXES */}
-
-        <Axes />
-
-        {/* BALANCE */}
-
-        <WaterfallLayer
-          rows={rows}
-          type="balance"
-          color="#ffffff"
-          offsetY={0.3}
-          maxValue={
-            maxBalance
-          }
-          amplitude={3}
-          opacity={0.65}
-        />
-
-        {/* PRINCIPAL */}
-
-        <WaterfallLayer
-          rows={rows}
-          type="principal"
-          color="#00d4ff"
-          offsetY={0}
-          maxValue={
-            maxPrincipal
-          }
-          amplitude={2.5}
-          opacity={0.75}
-        />
-
-        {/* GROWTH */}
-
-        <WaterfallLayer
-          rows={rows}
-          type="growth"
-          color="#22c55e"
-          offsetY={-0.18}
-          maxValue={
-            maxGrowth
-          }
-          amplitude={1.2}
-          opacity={0.75}
-        />
-
-        {/* TAX */}
-
-        <WaterfallLayer
-          rows={rows}
-          type="tax"
-          color="#ef4444"
-          offsetY={-0.36}
-          maxValue={maxTax}
-          amplitude={0.9}
-          opacity={0.75}
-        />
-
-        {/* RMD */}
-
-        <WaterfallLayer
-          rows={rows}
-          type="rmd"
-          color="#8b5cf6"
-          offsetY={-0.54}
-          maxValue={maxRmd}
-          amplitude={1}
-          opacity={0.75}
-        />
-
-        {/* HOVER */}
-
-        <HoverInteractionLayer
-          rows={rows}
-          maxBalance={
-            maxBalance
-          }
-        />
-      </Canvas>
+      <CinematicLegend items={legendItems} />
     </div>
   );
 };

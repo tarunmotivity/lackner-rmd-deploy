@@ -204,7 +204,7 @@ const rows =
         }}
       >
         {view === "3d" ? (
-          <CascadeFlow3D />
+          <CascadeFlow3D mode="WATERFALL" />
         ) : (
           <PlotlyChart
   data={[

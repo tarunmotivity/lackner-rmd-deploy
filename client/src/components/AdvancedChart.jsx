@@ -15,7 +15,7 @@ import {
   Box,
 } from "@mui/material";
 
-import ProjectionOrbitals from "./ProjectionOrbitals";
+import CascadeFlow3D from "./CascadeFlow3D";
 import PieChart3D from "./PieChart3D";
 import ThreeDBarChart from "./ThreeDBarChart";
 import WealthMountainSurface from "./WealthMountainSurface";
@@ -370,10 +370,9 @@ const AdvancedChart = () => {
         >
           {/* PROJECTION */}
 
-          {view ===
-            "projection" && (
-            <ProjectionOrbitals
-              data={data}
+          {view === "projection" && (
+            <CascadeFlow3D
+              mode="PROJECTION"
             />
           )}
 
@@ -492,31 +491,16 @@ const AdvancedChart = () => {
                       let color =
                         "#00d4ff";
 
-                      if (
-                        lower.includes(
-                          "withdraw"
-                        )
-                      ) {
-                        color =
-                          "#7c3aed";
+                      if (lower.includes("withdraw")) {
+                        color = "#a855f7";
                       }
 
-                      if (
-                        lower.includes(
-                          "tax"
-                        )
-                      ) {
-                        color =
-                          "#ef4444";
+                      if (lower.includes("tax")) {
+                        color = "#f43f5e";
                       }
 
-                      if (
-                        lower.includes(
-                          "growth"
-                        )
-                      ) {
-                        color =
-                          "#22c55e";
+                      if (lower.includes("growth")) {
+                        color = "#10b981";
                       }
 
                       return (

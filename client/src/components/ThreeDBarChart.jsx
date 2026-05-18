@@ -1,278 +1,123 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
-/* eslint-disable react-hooks/purity */
-import { useState, useMemo } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Text, Html, Sparkles } from "@react-three/drei";
- 
-const ThreeDScene = ({ data, formatCurrency }) => {
-  const [hoveredIndex, setHoveredIndex] = useState(null);
- 
-  const { maxVal, spacingX, chartData } = useMemo(() => {
-    let max = 0;
-    data.forEach((d) => {
-      max = Math.max(max, d.rmd, d.tax, d.growth);
-    });
- 
-    const numPoints = data.length || 1;
-    const chartWidth = 22;
-    const spacing = chartWidth / numPoints;
-    const barWidth = spacing * 0.25;
- 
- 
-    return {
-      maxVal: max,
-      spacingX: spacing,
-      chartData: data.map((d, index) => ({
-        ...d,
-        x: (index - numPoints / 2) * spacing,
-        bars: [
-          { key: "rmd", value: d.rmd, color: "#7c3aed", offset: -barWidth },
-          { key: "tax", value: d.tax, color: "#ef4444", offset: 0 },
-          { key: "growth", value: d.growth, color: "#22c55e", offset: barWidth },
-        ],
-      })),
-    };
-  }, [data]);
- 
-  const scaleY = 10 / (maxVal || 1);
- 
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import { useFrame } from "@react-three/fiber";
+import { Text, Html } from "@react-three/drei";
+import * as THREE from "three";
+import { 
+  CinematicCanvas, 
+  CinematicCamera, 
+  CinematicTooltip,
+  CinematicLegend,
+  CinematicLabel
+} from "./CinematicSystem";
+
+const SkylineTower = ({ position, height, color, index, fullRow, onHover }) => {
+  const [hovered, setHovered] = useState(false);
+  const meshRef = useRef();
+  const startTRef = useRef(-1);
+
+  useFrame((state) => {
+    if (startTRef.current === -1) startTRef.current = state.clock.elapsedTime;
+    const elapsed = state.clock.elapsedTime - startTRef.current;
+    const trigger = index * 0.05;
+    const p = THREE.MathUtils.clamp((elapsed - trigger) * 4, 0, 1);
+    if (meshRef.current) {
+      meshRef.current.scale.y = p;
+      meshRef.current.visible = p > 0;
+      meshRef.current.material.emissiveIntensity = 0.5 + (hovered ? 3 : Math.sin(state.clock.elapsedTime * 2 + index) * 0.5);
+    }
+  });
+
   return (
-    <group position={[0, -4, 0]}>
-      <points>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={2000}
-            array={new Float32Array(
-              Array.from({ length: 2000 * 3 }, () => (Math.random() - 0.5) * 80)
-            )}
-            itemSize={3}
-          />
-        </bufferGeometry>
- 
-        <pointsMaterial
-          size={0.08}
-          color="#ffffff"
-          transparent
-          opacity={0.8}
-        />
-      </points>
-   
-      <gridHelper args={[26, 26, "#334155", "#1e293b"]} position={[0, 0, 0]} />
- 
-     
-      {[0.25, 0.5, 0.75, 1].map((step) => {
-        const yValue = maxVal * step;
-        const yHeight = 10 * step;
-        return (
-          <group key={`y-axis-${step}`}>
-            <mesh position={[0, yHeight, -2]}>
-              <boxGeometry args={[26, 0.05, 0.05]} />
-              <meshBasicMaterial color="#d1d5db" />
-            </mesh>
-            <Text
-              position={[-13.5, yHeight, 0]}
-              fontSize={0.8}
-              color="#ffffff"
-              fontWeight="bold"
-              anchorX="right"
-              anchorY="middle"
-            >
-              {"$" + (yValue / 1000).toFixed(0) + "k"}
-            </Text>
-          </group>
-        );
-      })}
- 
-      {chartData.map((d, i) => (
-        <group
-          key={`group-${i}`}
-          position={[d.x, 0, 0]}
-          onPointerOver={(e) => {
-            e.stopPropagation();
-            setHoveredIndex(i);
-          }}
-          onPointerOut={(e) => {
-            e.stopPropagation();
-            setHoveredIndex(null);
-          }}
-        >
-          {/* X Axis Label */}
-          {i % 2 === 0 && (
-            <Text
-              position={[0, -1.5, 3]}
-              fontSize={0.7}
-              color="#ffffff"
-              fontWeight="bold"
-              anchorX="center"
-              anchorY="middle"
-            >
-              {d.label.split(" ")[0]}
-            </Text>
-          )}
- 
-         
-          <mesh visible={false} position={[0, 5, 0]}>
-            <boxGeometry args={[spacingX, 10, 4]} />
-          </mesh>
- 
-          {d.bars.map((b, j) => {
-            const height = b.value * scaleY;
-            if (height <= 0.01) return null;
-            const isHovered = hoveredIndex === i;
-            return (
-              <mesh
-                key={`${i}-${j}`}
-                position={[
-                  b.offset,
-                  height / 2 + Math.sin(i + j + Date.now() * 0.001) * 0.03,
-                  0,
-                ]}
-                castShadow
-                receiveShadow
-              >
-                <cylinderGeometry args={[0.12, 0.18, height, 32]} />
-                <meshPhysicalMaterial
-                  color={b.color}
-                  roughness={0.05}
-                  metalness={0.5}
-                  clearcoat={isHovered ? 1 : 0}
-                  clearcoatRoughness={0.1}
-                  emissive={b.color}
-                  emissiveIntensity={isHovered ? 1.5 : 0.5}
-                />
-              </mesh>
-            );
-          })}
- 
-         
-          {hoveredIndex === i && (
-            <Html
-              position={[0, Math.max(...d.bars.map((b) => b.value * scaleY)) - 2, 0]}
-              center
-              style={{ pointerEvents: "none", zIndex: 100 }}
-            >
-              <div
-                style={{
-                  background: "rgba(17, 24, 39, 0.9)",
-                  backdropFilter: "blur(8px)",
-                  padding: "12px 16px",
-                  borderRadius: "12px",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
-                  whiteSpace: "nowrap",
-                  fontSize: "13px",
-                  color: "#f9fafb",
-                  fontFamily: "'Inter', sans-serif",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  minWidth: "160px",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: "600",
-                    marginBottom: "8px",
-                    borderBottom: "1px solid rgba(255,255,255,0.1)",
-                    paddingBottom: "4px",
-                  }}
-                >
-                  Age: {d.label}
-                </div>
-                {d.bars.map((b) => (
-                  <div
-                    key={b.key}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <div
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          backgroundColor: b.color,
-                        }}
-                      />
-                      <span style={{ color: "#d1d5db", textTransform: "capitalize" }}>
-                        {b.key}
-                      </span>
-                    </div>
-                    <span style={{ fontWeight: "600", marginLeft: "12px" }}>
-                      {formatCurrency(b.value)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </Html>
-          )}
-        </group>
-      ))}
+    <group position={position}>
+      <mesh ref={meshRef} position={[0, height / 2, 0]} 
+        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); onHover(fullRow); }} 
+        onPointerOut={() => { setHovered(false); onHover(null); }} 
+        scale={[1, 0, 1]} visible={false}>
+        <boxGeometry args={[0.4, height, 0.4]} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.5} metalness={0.9} roughness={0.1} transparent opacity={0.95} />
+      </mesh>
     </group>
   );
 };
- 
+
 const ThreeDBarChart = ({ data, formatCurrency }) => {
+  const [hoveredData, setHoveredData] = useState(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  const chartData = useMemo(() => {
+    // Find local max for better scaling
+    let localMax = 0;
+    data.forEach((d) => { localMax = Math.max(localMax, d.rmd || 0, d.tax || 0, d.growth || 0); });
+    
+    const spacing = 28 / (data.length || 1);
+    const scaleY = 14 / (localMax || 1); // Normalize to 14 units height
+    
+    return data.map((d, i) => ({
+      ...d,
+      x: (i - data.length / 2) * spacing,
+      towers: [
+        { key: "rmd", value: d.rmd || 0, color: "#a855f7", offsetZ: -1 },
+        { key: "tax", value: d.tax || 0, color: "#ef4444", offsetZ: 0 },
+        { key: "growth", value: d.growth || 0, color: "#10b981", offsetZ: 1 },
+      ].map(t => ({ ...t, height: Math.max(t.value * scaleY, 0.2) }))
+    }));
+  }, [data]);
+
+  if (!data.length) return null;
+
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
+  const legendItems = [
+    { label: "Market Growth", color: "#10b981" },
+    { label: "Tax Liability", color: "#ef4444" },
+    { label: "RMD Withdrawals", color: "#a855f7" }
+  ];
+
   return (
-    <Canvas
-      camera={{ position: [0, 5, 18], fov: 42 }} shadows
-      shadows
-      style={{
-        background: "#020617",
-        borderRadius: "20px",
-      }}
-    >
-      <ambientLight intensity={0.5} />
-      <pointLight position={[0, 10, 0]} intensity={2} color="#00ffff" />
-      <directionalLight
-        position={[15, 20, 10]}
-        intensity={1}
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-camera-far={50}
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
-      />
-      <directionalLight position={[-10, 10, -10]} intensity={0.4} />
-      <OrbitControls
-        enablePan={true}
-        enableZoom={true}
-        enableRotate={true}
-        maxPolarAngle={Math.PI / 2 - 0.05}
-        minDistance={10}
-        maxDistance={50}
-      />
-      {/* <Stars
-        radius={80}
-        depth={50}
-        count={4000}
-        factor={4}
-        saturation={0}
-        fade
-        speed={5}
-      /> */}
-      <Sparkles
-        count={220}
-        scale={[
-          34,
-          16,
-          34,
-        ]}
-        size={3}
-        speed={0.45}
-        opacity={0.65}
-        color="#ffffff"
-      />
-      <ThreeDScene data={data} formatCurrency={formatCurrency} />
-    </Canvas>
+    <div style={{ width: "100%", height: "100%", position: "relative", background: "#010409" }}>
+      <CinematicCanvas cameraPos={[25, 20, 25]} onMouseMove={handleMouseMove}>
+        <CinematicCamera orbitSpeed={0.3} driftAmount={0} />
+        <group position={[0, -7, 0]}>
+          <gridHelper args={[60, 30, "#1e293b", "#0f172a"]} opacity={0.4} transparent />
+          {chartData.map((d, i) => (
+            <group key={i} position={[d.x, 0, 0]}>
+              {d.towers.map((t, j) => (
+                <SkylineTower key={j} position={[0, 0, t.offsetZ]} height={t.height} color={t.color} index={i} fullRow={d} onHover={setHoveredData} />
+              ))}
+              {i % 10 === 0 && (
+                <Text position={[0, -1.5, 4]} fontSize={0.5} color="#94a3b8" rotation={[-Math.PI / 2, 0, 0]} fontWeight="800">
+                  {d.year}
+                </Text>
+              )}
+            </group>
+          ))}
+        </group>
+      </CinematicCanvas>
+      
+      {hoveredData && (
+        <CinematicTooltip 
+          title={`Age ${hoveredData.age} (${hoveredData.year})`} 
+          mousePos={mousePos}
+          details={[
+            { label: "RMD", value: hoveredData.rmd, color: "#00f2ff" },
+            { label: "Tax", value: hoveredData.tax, color: "#f43f5e" },
+            { label: "Growth", value: hoveredData.growth, color: "#10b981" },
+            { label: "Total Balance", value: hoveredData.endBalance, color: "#38bdf8" }
+          ]} 
+        />
+      )}
+
+      <div style={{ position: "absolute", top: "40px", left: "40px", pointerEvents: "none" }}>
+        <CinematicLabel text="Cyber-Skyline Distribution" fontSize="28px" color="#fff" />
+      </div>
+      <CinematicLegend items={legendItems} />
+    </div>
   );
 };
- 
+
 export default ThreeDBarChart;
- 
